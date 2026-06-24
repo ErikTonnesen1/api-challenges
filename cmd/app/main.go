@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"github.com/ErikTonnesen1/api-challenges/internal/server"
+)
 
 func main() {
-	fmt.Println("Hello world")
+	server.StartServer()
 }
