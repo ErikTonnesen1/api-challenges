@@ -1,28 +1,26 @@
-package handler
+package todo
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/ErikTonnesen1/api-challenges/internal/dto"
 )
 
 // Use an interface as expected Handler param in order to inject test/mock services
 // Apparently, the definition of the Interface usually lives in the consumer, while the
 // concrete struct will live in the service package
-type TodoService interface {
-	GetAll() []dto.TodoItem
-	GetItem(id int) (dto.TodoItem, error)
-	AddItem(i dto.TodoItem) (dto.TodoItem, error)
+type ITodoService interface {
+	GetAll() []TodoItem
+	GetItem(id int) (TodoItem, error)
+	AddItem(i TodoItem) (TodoItem, error)
 }
 
 type todoHandler struct {
-	service TodoService
+	service ITodoService
 }
 
-func NewTodoHandler(s TodoService) *todoHandler {
+func NewTodoHandler(s ITodoService) *todoHandler {
 	return &todoHandler{
 		service: s,
 	}
@@ -37,7 +35,7 @@ func (h *todoHandler) Todos(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(h.service.GetAll())
 
 	case http.MethodPost:
-		var newItem dto.TodoItem
+		var newItem TodoItem
 		err := json.NewDecoder(r.Body).Decode(&newItem)
 		if err != nil {
 			http.Error(w, "invalid json", http.StatusBadRequest)

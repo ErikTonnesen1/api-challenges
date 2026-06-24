@@ -1,4 +1,4 @@
-package dto
+package todo
 
 type TodoItem struct {
 	Id    int    `json:"id"`

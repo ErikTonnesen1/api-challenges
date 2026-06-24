@@ -1,9 +1,17 @@
 package main
 
 import (
-	"github.com/ErikTonnesen1/api-challenges/internal/server"
+	"log"
+	"os"
 )
 
 func main() {
-	server.StartServer()
+	todoApplication := api{
+		port: "8080",
+	}
+
+	if err := todoApplication.serve(todoApplication.mount()); err != nil {
+		log.Printf("server failed to start %s", err)
+		os.Exit(1)
+	}
 }
