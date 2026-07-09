@@ -1,9 +1,11 @@
 package main
 
-import (
-	"github.com/ErikTonnesen1/api-challenges/internal/server"
-)
+import ()
 
 func main() {
-	server.StartServer()
+	application := app{
+		port: ":8080",
+	}
+
+	application.serve(application.mount())
 }
