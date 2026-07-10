@@ -49,7 +49,7 @@ func (s *TodoService) GetItem(id int) (TodoItem, error) {
 func (s *TodoService) ToggleDone(id int) (TodoItem, error) {
 	todoItem, ok := s.TodoItems[id]
 	if !ok {
-		return TodoItem{}, fmt.Errorf("Invalid ID", id)
+		return TodoItem{}, fmt.Errorf("Invalid ID: %d", id)
 	}
 
 	todoItem.Done = !todoItem.Done
@@ -59,7 +59,7 @@ func (s *TodoService) ToggleDone(id int) (TodoItem, error) {
 func (s *TodoService) DeleteTodo(id int) (TodoItem, error) {
 	deleteItem, ok := s.TodoItems[id]
 	if !ok {
-		return TodoItem{}, fmt.Errorf("No TodoItem found for ID: %s", id)
+		return TodoItem{}, fmt.Errorf("No TodoItem found for ID: %d", id)
 	}
 	delete(s.TodoItems, id)
 	return *deleteItem, nil
