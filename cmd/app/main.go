@@ -1,11 +1,17 @@
 package main
 
-import ()
+import (
+	"log"
+	"os"
+)
 
 func main() {
 	application := app{
 		port: ":8080",
 	}
 
-	application.serve(application.mount())
+	if err := application.serve(application.mount()); err != nil {
+		log.Fatalf("Error starting server: %v", err)
+		os.Exit(1)
+	}
 }

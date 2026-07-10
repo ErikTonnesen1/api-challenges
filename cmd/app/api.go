@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -16,16 +17,16 @@ func (a *app) mount() *http.ServeMux {
 	todoHandler := todo.NewTodoHandler(todoService)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /todos/", todoHandler.GetTodos)
+	mux.HandleFunc("GET /todos", todoHandler.GetTodos)
 	mux.HandleFunc("GET /todos/{id}", todoHandler.TodosById)
 	mux.HandleFunc("PATCH /todos/{id}", todoHandler.ToggleDone)
-	mux.HandleFunc("POST /todos/", todoHandler.CreateTodo)
+	mux.HandleFunc("POST /todos", todoHandler.CreateTodo)
 	mux.HandleFunc("DELETE /todos/{id}", todoHandler.DeleteTodo)
 
 	return mux
 }
 
-func (a *app) serve(multiplexer *http.ServeMux) {
+func (a *app) serve(multiplexer *http.ServeMux) error {
 	server := http.Server{
 		Addr:         a.port,
 		Handler:      multiplexer,
@@ -34,5 +35,6 @@ func (a *app) serve(multiplexer *http.ServeMux) {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	server.ListenAndServe()
+	log.Printf("Starting server on port %s", a.port)
+	return server.ListenAndServe()
 }
