@@ -1,9 +1,17 @@
 package main
 
 import (
-	"github.com/ErikTonnesen1/api-challenges/internal/server"
+	"log"
+	"os"
 )
 
 func main() {
-	server.StartServer()
+	application := app{
+		port: ":8080",
+	}
+
+	if err := application.serve(application.mount()); err != nil {
+		log.Fatalf("Error starting server: %v", err)
+		os.Exit(1)
+	}
 }
