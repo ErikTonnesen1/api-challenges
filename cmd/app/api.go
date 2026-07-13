@@ -6,24 +6,27 @@ import (
 	"time"
 
 	todo "github.com/ErikTonnesen1/api-challenges/internal/todo"
+	"github.com/gin-gonic/gin"
 )
 
 type app struct {
-	port string
+	port    string
+	ginPort string
 }
 
-func (a *app) mount() *http.ServeMux {
+func (a *app) getRoutes() *gin.Engine {
 	todoService := todo.NewTodoService()
 	todoHandler := todo.NewTodoHandler(todoService)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /todos", todoHandler.GetTodos)
-	mux.HandleFunc("GET /todos/{id}", todoHandler.TodosById)
-	mux.HandleFunc("PATCH /todos/{id}", todoHandler.ToggleDone)
-	mux.HandleFunc("POST /todos", todoHandler.CreateTodo)
-	mux.HandleFunc("DELETE /todos/{id}", todoHandler.DeleteTodo)
+	routes := gin.Default()
 
-	return mux
+	routes.GET("/todos", todoHandler.GetTodos)
+	routes.GET("/todos/:id", todoHandler.TodosById)
+	routes.POST("/todos", todoHandler.CreateTodo)
+	routes.PATCH("/todos/:id", todoHandler.ToggleDone)
+	routes.DELETE("/todos/:id", todoHandler.DeleteTodo)
+
+	return routes
 }
 
 func (a *app) serve(multiplexer *http.ServeMux) error {
@@ -37,4 +40,9 @@ func (a *app) serve(multiplexer *http.ServeMux) error {
 
 	log.Printf("Starting server on port %s", a.port)
 	return server.ListenAndServe()
+}
+
+func (a *app) serveGin(engine *gin.Engine) error {
+	log.Printf("Starting Gin server on port %s", a.ginPort)
+	return engine.Run(a.ginPort)
 }

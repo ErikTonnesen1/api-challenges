@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Use an interface as expected Handler param in order to inject test/mock services
@@ -28,71 +30,80 @@ func NewTodoHandler(s ITodoService) *todoHandler {
 	}
 }
 
-func (h *todoHandler) GetTodos(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(h.service.GetAll())
+func (h *todoHandler) GetTodos(c *gin.Context) {
+	c.JSON(http.StatusOK, h.service.GetAll())
 
 }
 
-func (h *todoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (h *todoHandler) CreateTodo(c *gin.Context) {
 	var newItem TodoItem
-	err := json.NewDecoder(r.Body).Decode(&newItem)
+	err := json.NewDecoder(c.Request.Body).Decode(&newItem)
 	if err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid json",
+		})
 		return
 	}
 	addedItem, err := h.service.AddItem(newItem)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(addedItem)
+	c.JSON(http.StatusCreated, addedItem)
 }
 
-func (h *todoHandler) TodosById(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	requestedId := r.PathValue("id")
+func (h *todoHandler) TodosById(c *gin.Context) {
+	requestedId := c.Param("id")
 	id, err := strconv.Atoi(requestedId)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Id must be of type int: %s", requestedId), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Id must be of type int: %s", requestedId),
+		})
+		return
 	}
 	todoItem, err := h.service.GetItem(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
+		})
+		return
 	} else {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(todoItem)
+		c.JSON(http.StatusOK, todoItem)
 	}
 }
 
-func (h *todoHandler) ToggleDone(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	pathId := r.PathValue("id")
+func (h *todoHandler) ToggleDone(c *gin.Context) {
+	pathId := c.Param("id")
 	id, err := strconv.Atoi(pathId)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("ID could not be parsed: %s", pathId), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("ID could not be parsed %s", pathId),
+		})
+		return
 	}
 	toggledItem, err := h.service.ToggleDone(id)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(toggledItem)
+	c.JSON(http.StatusOK, toggledItem)
 }
 
-func (h *todoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	pathId := r.PathValue("id")
+func (h *todoHandler) DeleteTodo(c *gin.Context) {
+	pathId := c.Param("id")
 	id, err := strconv.Atoi(pathId)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("ID could not be parsed: %s", pathId), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("ID could not be parsed: %s", pathId),
+		})
+		return
 	}
 	deletedItem, err := h.service.DeleteTodo(id)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(deletedItem)
+	c.JSON(http.StatusOK, deletedItem)
 }
