@@ -37,8 +37,7 @@ func (h *todoHandler) GetTodos(c *gin.Context) {
 
 func (h *todoHandler) CreateTodo(c *gin.Context) {
 	var newItem TodoItem
-	err := json.NewDecoder(c.Request.Body).Decode(&newItem)
-	if err != nil {
+	if err := c.ShouldBindJSON(&newItem); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid json",
 		})
@@ -106,4 +105,24 @@ func (h *todoHandler) DeleteTodo(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, deletedItem)
+}
+
+func (h *todoHandler) ReplaceTodo(c *gin.Context) {
+	pathId := c.Param("id")
+	id, err := strconv.Atoi(pathId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Cannot parse ID: %s", pathId),
+		})
+		return
+	}
+
+	var replacement TodoItem
+	if err := c.ShouldBindJSON(&replacement); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid json",
+		})
+		return
+	}
+
 }

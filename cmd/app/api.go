@@ -24,6 +24,7 @@ func (a *app) getRoutes() *gin.Engine {
 	routes.GET("/todos/:id", todoHandler.TodosById)
 	routes.POST("/todos", todoHandler.CreateTodo)
 	routes.PATCH("/todos/:id", todoHandler.ToggleDone)
+	routes.PUT("/todos/:id", todoHandler.ReplaceTodo)
 	routes.DELETE("/todos/:id", todoHandler.DeleteTodo)
 
 	return routes
