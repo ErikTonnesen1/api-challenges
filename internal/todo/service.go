@@ -28,14 +28,15 @@ func (s *TodoService) GetAll() []TodoItem {
 	return todoItems
 }
 
-func (s *TodoService) AddItem(i TodoItem) (TodoItem, error) {
-	if i.Id != 0 {
-		return TodoItem{}, fmt.Errorf("Setting an ID is not allowed")
+func (s *TodoService) AddItem(req TodoItemRequest) (TodoItem, error) {
+	newTodo := TodoItem{
+		Id:    s.id_increment,
+		Title: req.Title,
+		Done:  req.Done,
 	}
-	i.Id = s.id_increment
 	s.id_increment++
-	s.TodoItems[i.Id] = &i
-	return i, nil
+	s.TodoItems[newTodo.Id] = &newTodo
+	return newTodo, nil
 }
 
 func (s *TodoService) GetItem(id int) (TodoItem, error) {
@@ -65,12 +66,16 @@ func (s *TodoService) DeleteTodo(id int) (TodoItem, error) {
 	return *deleteItemPtr, nil
 }
 
-func (s *TodoService) ReplaceTodo(id int, replacement TodoItem) (TodoItem, error) {
+func (s *TodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error) {
 	todoPtr, ok := s.TodoItems[id]
 	if !ok {
 		return TodoItem{}, fmt.Errorf("Could not find item to be replaced with id: %d", id)
 	}
-	*todoPtr = replacement
+	*todoPtr = TodoItem{
+		Id:    todoPtr.Id,
+		Title: replacement.Title,
+		Done:  replacement.Done,
+	}
 
 	return *todoPtr, nil
 }

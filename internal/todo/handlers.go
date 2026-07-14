@@ -1,7 +1,6 @@
 package todo
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -13,11 +12,13 @@ import (
 type ITodoService interface {
 	GetAll() []TodoItem
 	GetItem(id int) (TodoItem, error)
-	AddItem(i TodoItem) (TodoItem, error)
+	AddItem(i TodoItemRequest) (TodoItem, error)
 	ToggleDone(id int) (TodoItem, error)
 	DeleteTodo(id int) (TodoItem, error)
-	ReplaceTodo(id int, replacement TodoItem) (TodoItem, error)
+	ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error)
 }
+
+var TodoRequestContextKey string = "todoRequest"
 
 type todoHandler struct {
 	service ITodoService
@@ -35,13 +36,7 @@ func (h *todoHandler) GetTodos(c *gin.Context) {
 }
 
 func (h *todoHandler) CreateTodo(c *gin.Context) {
-	var newItem TodoItem
-	if err := c.ShouldBindJSON(&newItem); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid json",
-		})
-		return
-	}
+	newItem := c.MustGet(TodoRequestContextKey).(TodoItemRequest)
 	addedItem, err := h.service.AddItem(newItem)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -54,13 +49,7 @@ func (h *todoHandler) CreateTodo(c *gin.Context) {
 
 func (h *todoHandler) TodosById(c *gin.Context) {
 	requestedId := c.Param("id")
-	id, err := strconv.Atoi(requestedId)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Id must be of type int: %s", requestedId),
-		})
-		return
-	}
+	id, _ := strconv.Atoi(requestedId)
 	todoItem, err := h.service.GetItem(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -74,13 +63,7 @@ func (h *todoHandler) TodosById(c *gin.Context) {
 
 func (h *todoHandler) ToggleDone(c *gin.Context) {
 	pathId := c.Param("id")
-	id, err := strconv.Atoi(pathId)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("ID could not be parsed %s", pathId),
-		})
-		return
-	}
+	id, _ := strconv.Atoi(pathId)
 	toggledItem, err := h.service.ToggleDone(id)
 	if err != nil {
 		c.Status(http.StatusBadRequest)
@@ -92,12 +75,6 @@ func (h *todoHandler) ToggleDone(c *gin.Context) {
 func (h *todoHandler) DeleteTodo(c *gin.Context) {
 	pathId := c.Param("id")
 	id, err := strconv.Atoi(pathId)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("ID could not be parsed: %s", pathId),
-		})
-		return
-	}
 	deletedItem, err := h.service.DeleteTodo(id)
 	if err != nil {
 		c.Status(http.StatusBadRequest)
@@ -108,22 +85,8 @@ func (h *todoHandler) DeleteTodo(c *gin.Context) {
 
 func (h *todoHandler) ReplaceTodo(c *gin.Context) {
 	pathId := c.Param("id")
-	id, err := strconv.Atoi(pathId)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Cannot parse ID: %s", pathId),
-		})
-		return
-	}
-
-	var replacement TodoItem
-	if err := c.ShouldBindJSON(&replacement); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid json",
-		})
-		return
-	}
-
+	id, _ := strconv.Atoi(pathId)
+	replacement := c.MustGet(TodoRequestContextKey).(TodoItemRequest)
 	replacedItem, err := h.service.ReplaceTodo(id, replacement)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

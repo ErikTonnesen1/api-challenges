@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	todo "github.com/ErikTonnesen1/api-challenges/internal/todo"
+	"github.com/ErikTonnesen1/api-challenges/internal/todo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,13 +18,15 @@ func (a *app) getRoutes() *gin.Engine {
 	todoHandler := todo.NewTodoHandler(todoService)
 
 	routes := gin.Default()
+	todos := routes.Group("/todos")
+	todos.Use(todo.RequestValidation())
 
-	routes.GET("/todos", todoHandler.GetTodos)
-	routes.GET("/todos/:id", todoHandler.TodosById)
-	routes.POST("/todos", todoHandler.CreateTodo)
-	routes.PATCH("/todos/:id", todoHandler.ToggleDone)
-	routes.PUT("/todos/:id", todoHandler.ReplaceTodo)
-	routes.DELETE("/todos/:id", todoHandler.DeleteTodo)
+	todos.GET("", todoHandler.GetTodos)
+	todos.GET("/:id", todoHandler.TodosById)
+	todos.POST("", todoHandler.CreateTodo)
+	todos.PATCH("/:id", todoHandler.ToggleDone)
+	todos.PUT("/:id", todoHandler.ReplaceTodo)
+	todos.DELETE("/:id", todoHandler.DeleteTodo)
 
 	return routes
 }
