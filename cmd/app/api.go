@@ -10,8 +10,7 @@ import (
 )
 
 type app struct {
-	port    string
-	ginPort string
+	port string
 }
 
 func (a *app) getRoutes() *gin.Engine {
@@ -44,6 +43,6 @@ func (a *app) serve(multiplexer *http.ServeMux) error {
 }
 
 func (a *app) serveGin(engine *gin.Engine) error {
-	log.Printf("Starting Gin server on port %s", a.ginPort)
-	return engine.Run(a.ginPort)
+	log.Printf("Starting Gin server on port %s", a.port)
+	return engine.Run(a.port)
 }

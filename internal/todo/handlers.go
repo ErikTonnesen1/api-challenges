@@ -1,12 +1,10 @@
 package todo
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Use an interface as expected Handler param in order to inject test/mock services
@@ -18,6 +16,7 @@ type ITodoService interface {
 	AddItem(i TodoItem) (TodoItem, error)
 	ToggleDone(id int) (TodoItem, error)
 	DeleteTodo(id int) (TodoItem, error)
+	ReplaceTodo(id int, replacement TodoItem) (TodoItem, error)
 }
 
 type todoHandler struct {
@@ -124,5 +123,13 @@ func (h *todoHandler) ReplaceTodo(c *gin.Context) {
 		})
 		return
 	}
+
+	replacedItem, err := h.service.ReplaceTodo(id, replacement)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+	}
+	c.JSON(http.StatusOK, replacedItem)
 
 }

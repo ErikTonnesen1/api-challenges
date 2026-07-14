@@ -6,8 +6,7 @@ import (
 
 func main() {
 	application := app{
-		port:    ":8080",
-		ginPort: ":8081",
+		port: ":8080",
 	}
 
 	engine := application.getRoutes()
