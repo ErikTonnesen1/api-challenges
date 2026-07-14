@@ -1,12 +1,10 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"time"
-
+	"github.com/ErikTonnesen1/api-challenges/internal/middleware"
 	"github.com/ErikTonnesen1/api-challenges/internal/todo"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 type app struct {
@@ -19,7 +17,7 @@ func (a *app) getRoutes() *gin.Engine {
 
 	routes := gin.Default()
 	todos := routes.Group("/todos")
-	todos.Use(todo.RequestValidation())
+	todos.Use(middleware.Logging(), todo.RequestValidation())
 
 	todos.GET("", todoHandler.GetTodos)
 	todos.GET("/:id", todoHandler.TodosById)
@@ -29,19 +27,6 @@ func (a *app) getRoutes() *gin.Engine {
 	todos.DELETE("/:id", todoHandler.DeleteTodo)
 
 	return routes
-}
-
-func (a *app) serve(multiplexer *http.ServeMux) error {
-	server := http.Server{
-		Addr:         a.port,
-		Handler:      multiplexer,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-	}
-
-	log.Printf("Starting server on port %s", a.port)
-	return server.ListenAndServe()
 }
 
 func (a *app) serveGin(engine *gin.Engine) error {
