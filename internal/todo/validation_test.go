@@ -10,19 +10,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ifInvalidId_thenReturn400(t *testing.T) {
+var todoById string = "/todos/%s"
+var todoByIdUri string = "/todos/:id"
+
+func Test_ifValidId_ThenContinueMiddlewareChain(t *testing.T) {
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
+
+	nextMwChainCalled := false
+	router := getHappyPathMwChain(todoByIdUri, &nextMwChainCalled, RequestValidation())
+	validId := "1"
+	request := httptest.NewRequest(http.MethodGet, fmt.Sprintf(todoById, validId), nil)
+	router.ServeHTTP(w, request)
+
+	assert.True(t, nextMwChainCalled)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+}
+
+func Test_ifInvalidId_thenReturn400(t *testing.T) {
+	r := httptest.NewRecorder()
+	nextMwChainCalled := false
+
+	rtr := getHappyPathMwChain(todoByIdUri, &nextMwChainCalled, RequestValidation())
 
 	incorrectIdType := "id1"
-	r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/todos/%s", incorrectIdType), nil)
-	r.Header.Set("Content-Type", "application/json")
+	request := httptest.NewRequest(http.MethodGet, fmt.Sprintf(todoById, incorrectIdType), nil)
 
-	c.Request = r
+	rtr.ServeHTTP(r, request)
 
-	mw := RequestValidation()
-	mw(c)
+	assert.False(t, nextMwChainCalled)
+	assert.Equal(t, http.StatusBadRequest, r.Code)
 
-	assert.Equal(t, c.Request.Response.StatusCode, http.StatusBadRequest)
+}
 
+func getHappyPathMwChain(uri string, happyPathBoolean *bool, handlers ...gin.HandlerFunc) *gin.Engine {
+	rtr := gin.New()
+
+	routerHandlers := append(handlers, func(c *gin.Context) { // Could produce side effect of modifying underlying array if capacity allows.
+		*happyPathBoolean = true
+		c.Status(http.StatusAccepted)
+	})
+
+	rtr.GET(
+		uri,
+		routerHandlers...,
+	)
+
+	return rtr
 }
