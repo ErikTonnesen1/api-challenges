@@ -16,7 +16,7 @@ func (a *app) getRoutes() *gin.Engine {
 	todoHandler := todo.NewTodoHandler(todoService)
 
 	routes := gin.Default()
-	todos := routes.Group("/todos")
+	todos := routes.Group(todo.TodoUri)
 	todos.Use(middleware.Logging(), todo.RequestValidation())
 
 	todos.GET("", todoHandler.GetTodos)

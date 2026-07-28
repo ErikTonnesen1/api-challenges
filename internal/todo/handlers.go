@@ -9,6 +9,9 @@ import (
 // Use an interface as expected Handler param in order to inject test/mock services
 // Apparently, the definition of the Interface usually lives in the consumer, while the
 // concrete struct will live in the service package
+
+var TodoUri string = "/todos"
+
 type ITodoService interface {
 	GetAll() []TodoItem
 	GetItem(id int) (TodoItem, error)
