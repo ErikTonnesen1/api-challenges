@@ -17,50 +17,75 @@ func NewTodoService() *TodoService {
 }
 
 // Side effect: Go iterates over a map in random order
-// SO each time this method is called, a different order of values will be returned
+// So each time this method is called, a different order of values will be returned
 // To return an ordered set, need to collect sorted key list, then return based on that list
-func (s *TodoService) GetAll() []TodoItem {
+func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
 	todoItems := make([]TodoItem, 0, len(s.TodoItems))
 
-	for _, item := range s.TodoItems {
-		todoItems = append(todoItems, *item)
+	titleFilterExists := queryFilter.Title != nil
+	doneFilterExists := queryFilter.Done != nil
+
+	for _, todoPtr := range s.TodoItems {
+		if titleFilterExists && todoPtr.Title != *queryFilter.Title {
+			continue
+		}
+		if doneFilterExists && todoPtr.Done != *queryFilter.Done {
+			continue
+		}
+
+		todoItems = append(todoItems, *todoPtr)
 	}
 	return todoItems
 }
 
-func (s *TodoService) AddItem(i TodoItem) (TodoItem, error) {
-	if i.Id != 0 {
-		return TodoItem{}, fmt.Errorf("Setting an ID is not allowed")
+func (s *TodoService) AddItem(req TodoItemRequest) (TodoItem, error) {
+	newTodo := TodoItem{
+		Id:    s.id_increment,
+		Title: *req.Title,
+		Done:  *req.Done,
 	}
-	i.Id = s.id_increment
 	s.id_increment++
-	s.TodoItems[i.Id] = &i
-	return i, nil
+	s.TodoItems[newTodo.Id] = &newTodo
+	return newTodo, nil
 }
 
 func (s *TodoService) GetItem(id int) (TodoItem, error) {
-	todoItem, ok := s.TodoItems[id]
+	todoPtr, ok := s.TodoItems[id]
 	if !ok {
 		return TodoItem{}, fmt.Errorf("todo item with id %d not found", id)
 	}
-	return *todoItem, nil
+	return *todoPtr, nil
 }
 
 func (s *TodoService) ToggleDone(id int) (TodoItem, error) {
-	todoItem, ok := s.TodoItems[id]
+	todoPtr, ok := s.TodoItems[id]
 	if !ok {
 		return TodoItem{}, fmt.Errorf("Invalid ID: %d", id)
 	}
 
-	todoItem.Done = !todoItem.Done
-	return *todoItem, nil
+	todoPtr.Done = !todoPtr.Done
+	return *todoPtr, nil
 }
 
 func (s *TodoService) DeleteTodo(id int) (TodoItem, error) {
-	deleteItem, ok := s.TodoItems[id]
+	deleteItemPtr, ok := s.TodoItems[id]
 	if !ok {
 		return TodoItem{}, fmt.Errorf("No TodoItem found for ID: %d", id)
 	}
 	delete(s.TodoItems, id)
-	return *deleteItem, nil
+	return *deleteItemPtr, nil
+}
+
+func (s *TodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error) {
+	todoPtr, ok := s.TodoItems[id]
+	if !ok {
+		return TodoItem{}, fmt.Errorf("Could not find item to be replaced with id: %d", id)
+	}
+	*todoPtr = TodoItem{
+		Id:    todoPtr.Id,
+		Title: *replacement.Title,
+		Done:  *replacement.Done,
+	}
+
+	return *todoPtr, nil
 }

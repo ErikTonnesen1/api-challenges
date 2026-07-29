@@ -1,8 +1,7 @@
 package todo
 
 import (
-	"encoding/json"
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
@@ -10,13 +9,20 @@ import (
 // Use an interface as expected Handler param in order to inject test/mock services
 // Apparently, the definition of the Interface usually lives in the consumer, while the
 // concrete struct will live in the service package
+
+var TodoUri string = "/todos"
+
 type ITodoService interface {
-	GetAll() []TodoItem
+	GetAll(TodoItemRequest) []TodoItem
 	GetItem(id int) (TodoItem, error)
-	AddItem(i TodoItem) (TodoItem, error)
+	AddItem(i TodoItemRequest) (TodoItem, error)
 	ToggleDone(id int) (TodoItem, error)
 	DeleteTodo(id int) (TodoItem, error)
+	ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error)
 }
+
+var TodoRequestContextKey string = "todoRequest"
+var TodoRequestQueryFilter string = "todoRequestFilter"
 
 type todoHandler struct {
 	service ITodoService
@@ -28,71 +34,73 @@ func NewTodoHandler(s ITodoService) *todoHandler {
 	}
 }
 
-func (h *todoHandler) GetTodos(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(h.service.GetAll())
-
+func (h *todoHandler) GetTodos(c *gin.Context) {
+	queryFilter, filterExists := c.Get(TodoRequestQueryFilter)
+	if filterExists {
+		c.JSON(http.StatusOK, h.service.GetAll(queryFilter.(TodoItemRequest)))
+	} else {
+		c.JSON(http.StatusOK, h.service.GetAll(TodoItemRequest{}))
+	}
 }
 
-func (h *todoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var newItem TodoItem
-	err := json.NewDecoder(r.Body).Decode(&newItem)
-	if err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
-		return
-	}
+func (h *todoHandler) CreateTodo(c *gin.Context) {
+	newItem := c.MustGet(TodoRequestContextKey).(TodoItemRequest)
 	addedItem, err := h.service.AddItem(newItem)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(addedItem)
+	c.JSON(http.StatusCreated, addedItem)
 }
 
-func (h *todoHandler) TodosById(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	requestedId := r.PathValue("id")
-	id, err := strconv.Atoi(requestedId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Id must be of type int: %s", requestedId), http.StatusBadRequest)
-	}
+func (h *todoHandler) TodosById(c *gin.Context) {
+	requestedId := c.Param("id")
+	id, _ := strconv.Atoi(requestedId)
 	todoItem, err := h.service.GetItem(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
+		})
+		return
 	} else {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(todoItem)
+		c.JSON(http.StatusOK, todoItem)
 	}
 }
 
-func (h *todoHandler) ToggleDone(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	pathId := r.PathValue("id")
-	id, err := strconv.Atoi(pathId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("ID could not be parsed: %s", pathId), http.StatusBadRequest)
-	}
+func (h *todoHandler) ToggleDone(c *gin.Context) {
+	pathId := c.Param("id")
+	id, _ := strconv.Atoi(pathId)
 	toggledItem, err := h.service.ToggleDone(id)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(toggledItem)
+	c.JSON(http.StatusOK, toggledItem)
 }
 
-func (h *todoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	pathId := r.PathValue("id")
+func (h *todoHandler) DeleteTodo(c *gin.Context) {
+	pathId := c.Param("id")
 	id, err := strconv.Atoi(pathId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("ID could not be parsed: %s", pathId), http.StatusBadRequest)
-	}
 	deletedItem, err := h.service.DeleteTodo(id)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(deletedItem)
+	c.JSON(http.StatusOK, deletedItem)
+}
+
+func (h *todoHandler) ReplaceTodo(c *gin.Context) {
+	pathId := c.Param("id")
+	id, _ := strconv.Atoi(pathId)
+	replacement := c.MustGet(TodoRequestContextKey).(TodoItemRequest)
+	replacedItem, err := h.service.ReplaceTodo(id, replacement)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+	}
+	c.JSON(http.StatusOK, replacedItem)
+
 }

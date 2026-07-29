@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 )
 
 func main() {
@@ -10,8 +9,9 @@ func main() {
 		port: ":8080",
 	}
 
-	if err := application.serve(application.mount()); err != nil {
-		log.Fatalf("Error starting server: %v", err)
-		os.Exit(1)
+	engine := application.getRoutes()
+
+	if ginErr := application.serveGin(engine); ginErr != nil {
+		log.Fatalf("Error starting Gin server: %v", ginErr)
 	}
 }
