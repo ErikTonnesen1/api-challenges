@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,7 +37,7 @@ func RequestValidation() gin.HandlerFunc {
 
 func QueryFilterValidation() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//If passed query params for a GET endpoint
+		//If passed query params
 		if c.Query("title") != "" ||
 			c.Query("done") != "" {
 			doneQueryParam, err := strconv.ParseBool(c.Query("done"))
@@ -44,7 +45,10 @@ func QueryFilterValidation() gin.HandlerFunc {
 				throwBadRequestError(c, "'done' query param must be of type bool")
 				return
 			}
-			c.Set(TodoRequestQueryFilter, TodoItemRequest{c.Query("title"), doneQueryParam})
+			c.Set(TodoRequestQueryFilter,
+				TodoItemRequest{
+					util.String(c.Query("title")),
+					&doneQueryParam})
 		}
 
 		c.Next()

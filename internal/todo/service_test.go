@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +25,7 @@ func TestGetAll(t *testing.T) {
 		},
 	}
 
-	todoItems := todoService.GetAll()
+	todoItems := todoService.GetAll(TodoItemRequest{})
 
 	assert.Equal(t, 2, len(todoItems))
 	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], todoItems[0]))
@@ -32,18 +33,113 @@ func TestGetAll(t *testing.T) {
 
 }
 
+func TestGetAll_WithTitleQuery(t *testing.T) {
+	todoService := TodoService{
+		id_increment: 2,
+		TodoItems: map[int]*TodoItem{
+			1: &TodoItem{
+				Id:    1,
+				Title: "Find me",
+				Done:  false,
+			},
+			2: &TodoItem{
+				Id:    1,
+				Title: "Don't Find me",
+				Done:  false,
+			},
+		},
+	}
+
+	titleQuery := TodoItemRequest{
+		Title: util.String("Find me"),
+		Done:  nil,
+	}
+
+	foundItems := todoService.GetAll(titleQuery)
+
+	assert.Equal(t, 1, len(foundItems))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], foundItems[0]))
+}
+
+func TestGetAll_WithDoneQuery(t *testing.T) {
+	todoService := TodoService{
+		id_increment: 2,
+		TodoItems: map[int]*TodoItem{
+			1: &TodoItem{
+				Id:    1,
+				Title: "Find me #1",
+				Done:  false,
+			},
+			2: &TodoItem{
+				Id:    1,
+				Title: "Find me #2",
+				Done:  false,
+			},
+			3: &TodoItem{
+				Id:    1,
+				Title: "Don't Find me ",
+				Done:  true,
+			},
+		},
+	}
+
+	titleQuery := TodoItemRequest{
+		Title: nil,
+		Done:  util.Bool(false),
+	}
+
+	foundItems := todoService.GetAll(titleQuery)
+
+	assert.True(t, len(foundItems) == 2)
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], foundItems[0]))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[2], foundItems[1]))
+}
+
+func TestGetAll_WithTitleAndDoneQuery(t *testing.T) {
+	todoService := TodoService{
+		id_increment: 2,
+		TodoItems: map[int]*TodoItem{
+			1: &TodoItem{
+				Id:    1,
+				Title: "Find me",
+				Done:  false,
+			},
+			2: &TodoItem{
+				Id:    1,
+				Title: "Don't Find me",
+				Done:  false,
+			},
+			3: &TodoItem{
+				Id:    1,
+				Title: "Don't Find me ",
+				Done:  true,
+			},
+		},
+	}
+
+	titleQuery := TodoItemRequest{
+		Title: util.String("Find me"),
+		Done:  util.Bool(false),
+	}
+
+	foundItems := todoService.GetAll(titleQuery)
+
+	assert.True(t, len(foundItems) == 1)
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], foundItems[0]))
+}
+
 func TestAddItem(t *testing.T) {
 	todoService := NewTodoService()
 	newTodo := TodoItemRequest{
-		Title: "TestAddItem",
-		Done:  false,
+		Title: util.String("TestAddItem"),
+		Done:  util.Bool(false),
 	}
 
 	added, err := todoService.AddItem(newTodo)
 	assert.True(t, err == nil)
 	assert.True(t, added.Id != 0)
-	assert.Equal(t, newTodo.Title, added.Title)
-	assert.Equal(t, newTodo.Done, added.Done)
+	assert.Equal(t, *newTodo.Title, added.Title)
+	assert.Equal(t, *newTodo.Done, added.Done)
 	assert.Equal(t, 1, len(todoService.TodoItems))
 
 }
@@ -150,18 +246,18 @@ func TestReplaceTodo(t *testing.T) {
 	}
 
 	replacementTodo := TodoItemRequest{
-		Title: "New Title",
-		Done:  true,
+		Title: util.String("New Title"),
+		Done:  util.Bool(true),
 	}
 
 	new, err := todoService.ReplaceTodo(1, replacementTodo)
 	assert.True(t, err == nil)
-	assert.Equal(t, replacementTodo.Title, new.Title)
-	assert.Equal(t, replacementTodo.Done, new.Done)
+	assert.Equal(t, *replacementTodo.Title, new.Title)
+	assert.Equal(t, *replacementTodo.Done, new.Done)
 
 	todoItemInMap := todoService.TodoItems[1]
-	assert.Equal(t, replacementTodo.Title, todoItemInMap.Title)
-	assert.Equal(t, replacementTodo.Done, todoItemInMap.Done)
+	assert.Equal(t, *replacementTodo.Title, todoItemInMap.Title)
+	assert.Equal(t, *replacementTodo.Done, todoItemInMap.Done)
 }
 
 func TestReplaceTodo_throwsErrorIfIdNotFoundInMap(t *testing.T) {
@@ -176,8 +272,8 @@ func TestReplaceTodo_throwsErrorIfIdNotFoundInMap(t *testing.T) {
 	}
 
 	replacementTodo := TodoItemRequest{
-		Title: "New Title",
-		Done:  true,
+		Title: util.String("New Title"),
+		Done:  util.Bool(true),
 	}
 
 	_, err := todoService.ReplaceTodo(0, replacementTodo)

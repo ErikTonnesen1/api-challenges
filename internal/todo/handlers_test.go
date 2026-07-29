@@ -3,14 +3,16 @@ package todo
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/ErikTonnesen1/api-challenges/internal/util"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 // Set Gin in TestMode for better test log output
@@ -92,8 +94,8 @@ func TestCreateTodo(t *testing.T) {
 	}
 
 	createItemRequest := TodoItemRequest{
-		Title: "Test Create",
-		Done:  false,
+		Title: util.String("Test Create"),
+		Done:  util.Bool(false),
 	}
 
 	reqBody, err := json.Marshal(createItemRequest)
@@ -116,8 +118,8 @@ func TestCreateTodo(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rw.Result().StatusCode)
 	assert.Equal(t, "application/json; charset=utf-8", rw.Header().Get("Content-Type"))
 	assert.Equal(t, mockService.AddItemResult, resultTodo)
-	assert.Equal(t, createItemRequest.Title, resultTodo.Title)
-	assert.Equal(t, createItemRequest.Done, resultTodo.Done)
+	assert.Equal(t, *createItemRequest.Title, resultTodo.Title)
+	assert.Equal(t, *createItemRequest.Done, resultTodo.Done)
 }
 
 func TestTodosById(t *testing.T) {
@@ -217,7 +219,7 @@ type MockTodoService struct {
 	ReplaceResult    TodoItem
 }
 
-func (m *MockTodoService) GetAll() []TodoItem {
+func (m *MockTodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
 	return m.GetAllResult
 }
 func (m *MockTodoService) GetItem(id int) (TodoItem, error) {

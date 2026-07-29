@@ -20,10 +20,19 @@ func NewTodoService() *TodoService {
 // So each time this method is called, a different order of values will be returned
 // To return an ordered set, need to collect sorted key list, then return based on that list
 func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
-
 	todoItems := make([]TodoItem, 0, len(s.TodoItems))
 
+	titleFilterExists := queryFilter.Title != nil
+	doneFilterExists := queryFilter.Done != nil
+
 	for _, todoPtr := range s.TodoItems {
+		if titleFilterExists && todoPtr.Title != *queryFilter.Title {
+			continue
+		}
+		if doneFilterExists && todoPtr.Done != *queryFilter.Done {
+			continue
+		}
+
 		todoItems = append(todoItems, *todoPtr)
 	}
 	return todoItems
@@ -32,8 +41,8 @@ func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
 func (s *TodoService) AddItem(req TodoItemRequest) (TodoItem, error) {
 	newTodo := TodoItem{
 		Id:    s.id_increment,
-		Title: req.Title,
-		Done:  req.Done,
+		Title: *req.Title,
+		Done:  *req.Done,
 	}
 	s.id_increment++
 	s.TodoItems[newTodo.Id] = &newTodo
@@ -74,8 +83,8 @@ func (s *TodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem
 	}
 	*todoPtr = TodoItem{
 		Id:    todoPtr.Id,
-		Title: replacement.Title,
-		Done:  replacement.Done,
+		Title: *replacement.Title,
+		Done:  *replacement.Done,
 	}
 
 	return *todoPtr, nil

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,8 +59,8 @@ func Test_ifPostMethod_andRequestBodyIsValid_thenReturn200(t *testing.T) {
 	rw := httptest.NewRecorder()
 
 	validTodoItemRequest := TodoItemRequest{
-		Title: "Test Validation Json Handling",
-		Done:  false,
+		Title: util.String("Test Validation Json Handling"),
+		Done:  util.Bool(false),
 	}
 
 	rtr, state := getHappyPathMwChain(http.MethodPost, TodoUri, RequestValidation())
