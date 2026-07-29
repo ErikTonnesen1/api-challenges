@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ErikTonnesen1/api-challenges/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +20,6 @@ func RequestValidation() gin.HandlerFunc {
 
 		if c.Request.Method == http.MethodPost ||
 			c.Request.Method == http.MethodPut {
-
 			var requestTodo TodoItemRequest
 			if err := c.ShouldBindJSON(&requestTodo); err != nil {
 				throwBadRequestError(c, fmt.Sprintf("Could not parse JSON: %s", err))
@@ -38,19 +36,22 @@ func RequestValidation() gin.HandlerFunc {
 func QueryFilterValidation() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		//If passed query params
-		if c.Query("title") != "" ||
-			c.Query("done") != "" {
-			doneQueryParam, err := strconv.ParseBool(c.Query("done"))
+		var titleFilter *string = nil
+		var doneFilter *bool = nil
+		if tFilter := c.Query("title"); tFilter != "" {
+			titleFilter = &tFilter
+		}
+
+		if dFilter := c.Query("done"); dFilter != "" {
+			doneQueryParam, err := strconv.ParseBool(dFilter)
 			if err != nil {
 				throwBadRequestError(c, "'done' query param must be of type bool")
 				return
 			}
-			c.Set(TodoRequestQueryFilter,
-				TodoItemRequest{
-					util.String(c.Query("title")),
-					&doneQueryParam})
+			doneFilter = &doneQueryParam
 		}
 
+		c.Set(TodoRequestQueryFilter, TodoItemRequest{titleFilter, doneFilter})
 		c.Next()
 	}
 }
