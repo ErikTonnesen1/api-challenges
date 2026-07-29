@@ -19,7 +19,7 @@ func (a *app) getRoutes() *gin.Engine {
 	todos := routes.Group(todo.TodoUri)
 	todos.Use(middleware.Logging(), todo.RequestValidation())
 
-	todos.GET("", todoHandler.GetTodos)
+	todos.GET("", todo.QueryFilterValidation(), todoHandler.GetTodos)
 	todos.GET("/:id", todoHandler.TodosById)
 	todos.POST("", todoHandler.CreateTodo)
 	todos.PATCH("/:id", todoHandler.ToggleDone)

@@ -13,7 +13,7 @@ import (
 var TodoUri string = "/todos"
 
 type ITodoService interface {
-	GetAll() []TodoItem
+	GetAll(TodoItemRequest) []TodoItem
 	GetItem(id int) (TodoItem, error)
 	AddItem(i TodoItemRequest) (TodoItem, error)
 	ToggleDone(id int) (TodoItem, error)
@@ -22,6 +22,7 @@ type ITodoService interface {
 }
 
 var TodoRequestContextKey string = "todoRequest"
+var TodoRequestQueryFilter string = "todoRequestFilter"
 
 type todoHandler struct {
 	service ITodoService
@@ -34,8 +35,12 @@ func NewTodoHandler(s ITodoService) *todoHandler {
 }
 
 func (h *todoHandler) GetTodos(c *gin.Context) {
-	c.JSON(http.StatusOK, h.service.GetAll())
-
+	queryFilter, filterExists := c.Get(TodoRequestQueryFilter)
+	if filterExists {
+		c.JSON(http.StatusOK, h.service.GetAll(queryFilter.(TodoItemRequest)))
+	} else {
+		c.JSON(http.StatusOK, h.service.GetAll(TodoItemRequest{}))
+	}
 }
 
 func (h *todoHandler) CreateTodo(c *gin.Context) {

@@ -34,6 +34,23 @@ func RequestValidation() gin.HandlerFunc {
 	}
 }
 
+func QueryFilterValidation() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//If passed query params for a GET endpoint
+		if c.Query("title") != "" ||
+			c.Query("done") != "" {
+			doneQueryParam, err := strconv.ParseBool(c.Query("done"))
+			if err != nil {
+				throwBadRequestError(c, "'done' query param must be of type bool")
+				return
+			}
+			c.Set(TodoRequestQueryFilter, TodoItemRequest{c.Query("title"), doneQueryParam})
+		}
+
+		c.Next()
+	}
+}
+
 func throwBadRequestError(c *gin.Context, errorMsg string) {
 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 		"error": errorMsg,

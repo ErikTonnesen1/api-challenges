@@ -17,9 +17,10 @@ func NewTodoService() *TodoService {
 }
 
 // Side effect: Go iterates over a map in random order
-// SO each time this method is called, a different order of values will be returned
+// So each time this method is called, a different order of values will be returned
 // To return an ordered set, need to collect sorted key list, then return based on that list
-func (s *TodoService) GetAll() []TodoItem {
+func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
+
 	todoItems := make([]TodoItem, 0, len(s.TodoItems))
 
 	for _, todoPtr := range s.TodoItems {
