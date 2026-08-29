@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/ErikTonnesen1/api-challenges/internal/middleware"
+	"log"
+
 	"github.com/ErikTonnesen1/api-challenges/internal/todo"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 type app struct {
@@ -12,21 +12,9 @@ type app struct {
 }
 
 func (a *app) getRoutes() *gin.Engine {
-	todoService := todo.NewTodoService()
-	todoHandler := todo.NewTodoHandler(todoService)
-
-	routes := gin.Default()
-	todos := routes.Group(todo.TodoUri)
-	todos.Use(middleware.Logging(), todo.RequestValidation())
-
-	todos.GET("", todo.QueryFilterValidation(), todoHandler.GetTodos)
-	todos.GET("/:id", todoHandler.TodosById)
-	todos.POST("", todoHandler.CreateTodo)
-	todos.PATCH("/:id", todoHandler.ToggleDone)
-	todos.PUT("/:id", todoHandler.ReplaceTodo)
-	todos.DELETE("/:id", todoHandler.DeleteTodo)
-
-	return routes
+	engine := gin.Default()
+	todo.SetupTodoRoutes(engine)
+	return engine
 }
 
 func (a *app) serveGin(engine *gin.Engine) error {

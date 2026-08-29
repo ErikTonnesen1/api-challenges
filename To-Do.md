@@ -5,3 +5,7 @@ Middleware
 - [ In Progress ] Stretch goal: Query Param filtering 
     -  Add query param filtering: GET /todos?done=true
 
+
+Challenge #3
+
+- `database.go` will hold database information / creation / methods
