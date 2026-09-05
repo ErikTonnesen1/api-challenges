@@ -1,10 +1,11 @@
-package todo
+package middleware
 
 import (
 	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/models/todo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,13 +21,13 @@ func RequestValidation() gin.HandlerFunc {
 
 		if c.Request.Method == http.MethodPost ||
 			c.Request.Method == http.MethodPut {
-			var requestTodo TodoItemRequest
+			var requestTodo todo.TodoRequest
 			if err := c.ShouldBindJSON(&requestTodo); err != nil {
 				throwBadRequestError(c, fmt.Sprintf("Could not parse JSON: %s", err))
 				return
 			}
 
-			c.Set(TodoRequestContextKey, requestTodo)
+			c.Set(todo.TodoRequestContextKey, requestTodo)
 		}
 
 		c.Next()
@@ -51,7 +52,7 @@ func QueryFilterValidation() gin.HandlerFunc {
 			doneFilter = &doneQueryParam
 		}
 
-		c.Set(TodoRequestQueryFilter, TodoItemRequest{titleFilter, doneFilter})
+		c.Set(todo.TodoRequestQueryFilter, todo.TodoRequest{Title: titleFilter, Done: doneFilter})
 		c.Next()
 	}
 }

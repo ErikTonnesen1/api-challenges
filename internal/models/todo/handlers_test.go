@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ErikTonnesen1/api-challenges/internal/util"
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,7 +40,7 @@ func TestGetTodos(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockTService)
+	h := NewHandler(&mockTService)
 	//When
 	h.GetTodos(context)
 
@@ -66,7 +66,7 @@ func TestGetTodos_Empty(t *testing.T) {
 		GetAllResult: []TodoItem{},
 	}
 
-	h := NewTodoHandler(&mockTService)
+	h := NewHandler(&mockTService)
 
 	//When
 	h.GetTodos(context)
@@ -93,9 +93,9 @@ func TestCreateTodo(t *testing.T) {
 		},
 	}
 
-	createItemRequest := TodoItemRequest{
-		Title: util.String("Test Create"),
-		Done:  util.Bool(false),
+	createItemRequest := TodoRequest{
+		Title: helpers.StringPtr("Test Create"),
+		Done:  helpers.BoolPtr(false),
 	}
 
 	reqBody, err := json.Marshal(createItemRequest)
@@ -105,7 +105,7 @@ func TestCreateTodo(t *testing.T) {
 	rw, context := setupRouter(httptest.NewRequest(http.MethodPost, TodoUri, bytes.NewBuffer(reqBody)))
 	context.Set(TodoRequestContextKey, createItemRequest)
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	h.CreateTodo(context)
 
@@ -131,7 +131,7 @@ func TestTodosById(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, "/todos/1", nil))
 
@@ -158,7 +158,7 @@ func TestToggleDone(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodPatch, "/todos/1", nil))
 
@@ -185,7 +185,7 @@ func TestDeleteTodo(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodDelete, "/todos/1", nil))
 
@@ -219,14 +219,14 @@ type MockTodoService struct {
 	ReplaceResult    TodoItem
 }
 
-func (m *MockTodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
+func (m *MockTodoService) GetAll(queryFilter TodoRequest) []TodoItem {
 	return m.GetAllResult
 }
 func (m *MockTodoService) GetItem(id int) (TodoItem, error) {
 	return m.GetItemResult, m.ErrorResult
 }
 
-func (m *MockTodoService) AddItem(i TodoItemRequest) (TodoItem, error) {
+func (m *MockTodoService) AddItem(i TodoRequest) (TodoItem, error) {
 	return m.AddItemResult, m.ErrorResult
 }
 
@@ -239,6 +239,6 @@ func (m *MockTodoService) ToggleDone(id int) (TodoItem, error) {
 func (m *MockTodoService) DeleteTodo(id int) (TodoItem, error) {
 	return m.DeleteTodoResult, m.ErrorResult
 }
-func (m *MockTodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error) {
+func (m *MockTodoService) ReplaceTodo(id int, replacement TodoRequest) (TodoItem, error) {
 	return m.ReplaceResult, m.ErrorResult
 }

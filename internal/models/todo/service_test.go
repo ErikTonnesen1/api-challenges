@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ErikTonnesen1/api-challenges/internal/util"
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,9 +23,10 @@ func TestGetAll(t *testing.T) {
 				Done:  false,
 			},
 		},
+		nil,
 	}
 
-	todoItems := todoService.GetAll(TodoItemRequest{})
+	todoItems := todoService.GetAll(TodoRequest{})
 
 	assert.Equal(t, 2, len(todoItems))
 	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], todoItems[0]))
@@ -50,8 +51,8 @@ func TestGetAll_WithTitleQuery(t *testing.T) {
 		},
 	}
 
-	titleQuery := TodoItemRequest{
-		Title: util.String("Find me"),
+	titleQuery := TodoRequest{
+		Title: helpers.StringPtr("Find me"),
 		Done:  nil,
 	}
 
@@ -83,9 +84,9 @@ func TestGetAll_WithDoneQuery(t *testing.T) {
 		},
 	}
 
-	titleQuery := TodoItemRequest{
+	titleQuery := TodoRequest{
 		Title: nil,
-		Done:  util.Bool(false),
+		Done:  helpers.BoolPtr(false),
 	}
 
 	foundItems := todoService.GetAll(titleQuery)
@@ -117,9 +118,9 @@ func TestGetAll_WithTitleAndDoneQuery(t *testing.T) {
 		},
 	}
 
-	titleQuery := TodoItemRequest{
-		Title: util.String("Find me"),
-		Done:  util.Bool(false),
+	titleQuery := TodoRequest{
+		Title: helpers.StringPtr("Find me"),
+		Done:  helpers.BoolPtr(false),
 	}
 
 	foundItems := todoService.GetAll(titleQuery)
@@ -129,10 +130,10 @@ func TestGetAll_WithTitleAndDoneQuery(t *testing.T) {
 }
 
 func TestAddItem(t *testing.T) {
-	todoService := NewTodoService()
-	newTodo := TodoItemRequest{
-		Title: util.String("TestAddItem"),
-		Done:  util.Bool(false),
+	todoService := NewService()
+	newTodo := TodoRequest{
+		Title: helpers.StringPtr("TestAddItem"),
+		Done:  helpers.BoolPtr(false),
 	}
 
 	added, err := todoService.AddItem(newTodo)
@@ -245,9 +246,9 @@ func TestReplaceTodo(t *testing.T) {
 		},
 	}
 
-	replacementTodo := TodoItemRequest{
-		Title: util.String("New Title"),
-		Done:  util.Bool(true),
+	replacementTodo := TodoRequest{
+		Title: helpers.StringPtr("New Title"),
+		Done:  helpers.BoolPtr(true),
 	}
 
 	new, err := todoService.ReplaceTodo(1, replacementTodo)
@@ -271,9 +272,9 @@ func TestReplaceTodo_throwsErrorIfIdNotFoundInMap(t *testing.T) {
 		},
 	}
 
-	replacementTodo := TodoItemRequest{
-		Title: util.String("New Title"),
-		Done:  util.Bool(true),
+	replacementTodo := TodoRequest{
+		Title: helpers.StringPtr("New Title"),
+		Done:  helpers.BoolPtr(true),
 	}
 
 	_, err := todoService.ReplaceTodo(0, replacementTodo)

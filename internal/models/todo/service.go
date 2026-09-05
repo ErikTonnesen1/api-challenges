@@ -11,7 +11,7 @@ type TodoService struct {
 	Db           *sql.DB
 }
 
-func NewTodoService() *TodoService {
+func NewService() *TodoService {
 	return &TodoService{
 		id_increment: 1,
 		TodoItems:    make(map[int]*TodoItem),
@@ -25,7 +25,7 @@ func (s *TodoService) setDB(db *sql.DB) {
 // Side effect: Go iterates over a map in random order
 // So each time this method is called, a different order of values will be returned
 // To return an ordered set, need to collect sorted key list, then return based on that list
-func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
+func (s *TodoService) GetAll(queryFilter TodoRequest) []TodoItem {
 	todoItems := make([]TodoItem, 0, len(s.TodoItems))
 
 	titleFilterExists := queryFilter.Title != nil
@@ -44,7 +44,7 @@ func (s *TodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
 	return todoItems
 }
 
-func (s *TodoService) AddItem(req TodoItemRequest) (TodoItem, error) {
+func (s *TodoService) AddItem(req TodoRequest) (TodoItem, error) {
 	newTodo := TodoItem{
 		Id:    s.id_increment,
 		Title: *req.Title,
@@ -82,7 +82,7 @@ func (s *TodoService) DeleteTodo(id int) (TodoItem, error) {
 	return *deleteItemPtr, nil
 }
 
-func (s *TodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error) {
+func (s *TodoService) ReplaceTodo(id int, replacement TodoRequest) (TodoItem, error) {
 	todoPtr, ok := s.TodoItems[id]
 	if !ok {
 		return TodoItem{}, fmt.Errorf("Could not find item to be replaced with id: %d", id)
