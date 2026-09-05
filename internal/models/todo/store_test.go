@@ -2,6 +2,7 @@ package todo_test
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -39,10 +40,9 @@ func cleanTodos(t *testing.T, db *sql.DB) {
 
 func TestCRUD(t *testing.T) {
 	cleanTodos(t, testDB)
+	model := database.New(testDB)
 
 	t.Run("insert ~ should create todo in db", func(t *testing.T) {
-		model := database.New(testDB)
-
 		todo := todo.TodoRequest{
 			Title: helpers.StringPtr("Write tests"),
 			Done:  helpers.BoolPtr(false),
@@ -54,12 +54,67 @@ func TestCRUD(t *testing.T) {
 		assert.NotNil(t, id)
 		assert.NotNil(t, created_at)
 
-		// insertedItem, err := model.Todos.GetById(id)
+		insertedItem, err := model.Todos.GetById(id)
 
-		// assert.Equal(t, id, insertedItem.Id)
-		// assert.Equal(t, *todo.Title, insertedItem.Title)
-		// assert.Equal(t, *todo.Done, insertedItem.Done)
-		// assert.NotZero(t, insertedItem.ID)
+		assert.Equal(t, id, insertedItem.Id)
+		assert.Equal(t, *todo.Title, insertedItem.Title)
+		assert.Equal(t, *todo.Done, insertedItem.Done)
+		assert.NotZero(t, insertedItem.Id)
 	})
 
+	t.Run("Get ~ get by Id should return correct todo", func(t *testing.T) {
+		testTodo := insertTestTodo(model)
+
+		getResult, err := model.Todos.GetById(testTodo.Id)
+		if err != nil {
+			panic(err)
+		}
+
+		assert.Equal(t, testTodo.Title, getResult.Title)
+		assert.Equal(t, testTodo.Done, getResult.Done)
+		assert.NotNil(t, getResult.Id)
+		assert.NotNil(t, getResult.CreatedAt)
+	})
+
+	t.Run("delete ~ delete by Id should delete existing documnets", func(t *testing.T) {
+		testTodo := insertTestTodo(model)
+
+		err := model.Todos.Delete(testTodo.Id)
+		if err != nil {
+			panic(err)
+		}
+		_, err = model.Todos.GetById(testTodo.Id)
+		assert.True(t, errors.Is(err, todo.ErrRecordNotFound))
+	})
+	t.Run("update ~ updating a document should change existing document", func(t *testing.T) {
+		testTodo := insertTestTodo(model)
+
+		update := todo.TodoRequest{
+			Title: helpers.StringPtr("Finish Tests"),
+			Done:  helpers.BoolPtr(true),
+		}
+
+		updated, err := model.Todos.Update(testTodo.Id, update)
+		if err != nil {
+			panic(err)
+		}
+
+		assert.Equal(t, testTodo.Id, updated.Id)
+		assert.Equal(t, *update.Title, updated.Title)
+		assert.Equal(t, *update.Done, updated.Done)
+		assert.NotNil(t, updated.CreatedAt)
+	})
+
+}
+
+func insertTestTodo(model database.Models) todo.TodoItem {
+	testTodo := todo.TodoRequest{
+		Title: helpers.StringPtr("Write tests"),
+		Done:  helpers.BoolPtr(false),
+	}
+	id, created_at, err := model.Todos.Insert(testTodo)
+	if err != nil {
+		panic(err.Error())
+	}
+	return todo.TodoItem{Id: id, CreatedAt: created_at, Title: *testTodo.Title, Done: *testTodo.Done}
 }

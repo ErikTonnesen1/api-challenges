@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"testing"
 
@@ -16,12 +15,13 @@ import (
 )
 
 // Set Gin in TestMode for better test log output
-func TestMain(m *testing.M) {
+func SetupGinInTestMode(t *testing.T) {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
-	os.Exit(m.Run())
 }
 
 func TestGetTodos(t *testing.T) {
+	SetupGinInTestMode(t)
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, TodoUri, nil))
 
 	//Given
@@ -59,6 +59,7 @@ func TestGetTodos(t *testing.T) {
 }
 
 func TestGetTodos_Empty(t *testing.T) {
+	SetupGinInTestMode(t)
 	//Given
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, TodoUri, nil))
 
@@ -84,6 +85,7 @@ func TestGetTodos_Empty(t *testing.T) {
 }
 
 func TestCreateTodo(t *testing.T) {
+	SetupGinInTestMode(t)
 	//Given
 	mockService := MockTodoService{
 		AddItemResult: TodoItem{
@@ -123,6 +125,7 @@ func TestCreateTodo(t *testing.T) {
 }
 
 func TestTodosById(t *testing.T) {
+	SetupGinInTestMode(t)
 	mockService := MockTodoService{
 		GetItemResult: TodoItem{
 			Id:    1,
@@ -150,6 +153,7 @@ func TestTodosById(t *testing.T) {
 }
 
 func TestToggleDone(t *testing.T) {
+	SetupGinInTestMode(t)
 	mockService := MockTodoService{
 		ToggleDoneResult: TodoItem{
 			Id:    1,
@@ -177,6 +181,7 @@ func TestToggleDone(t *testing.T) {
 }
 
 func TestDeleteTodo(t *testing.T) {
+	SetupGinInTestMode(t)
 	mockService := MockTodoService{
 		DeleteTodoResult: TodoItem{
 			Id:    1,
