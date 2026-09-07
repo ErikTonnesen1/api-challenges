@@ -1,25 +1,21 @@
 package todo
 
 import (
-	"database/sql"
 	"fmt"
 )
 
 type TodoService struct {
 	id_increment int
 	TodoItems    map[int]*TodoItem
-	Db           *sql.DB
+	TodoDB       TodoModel
 }
 
-func NewService() *TodoService {
+func NewService(model TodoModel) *TodoService {
 	return &TodoService{
 		id_increment: 1,
 		TodoItems:    make(map[int]*TodoItem),
+		TodoDB:       model,
 	}
-}
-
-func (s *TodoService) setDB(db *sql.DB) {
-	s.Db = db
 }
 
 // Side effect: Go iterates over a map in random order

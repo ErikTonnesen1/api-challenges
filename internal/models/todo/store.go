@@ -106,3 +106,44 @@ func (tm *TodoModel) GetById(id int) (*TodoItem, error) {
 	}
 	return &todo, nil
 }
+
+func (tm *TodoModel) GetAll() ([]TodoItem, error) {
+	query := `
+	SELECT id, created_at, title, done
+	FROM todos
+	`
+
+	rows, err := tm.Db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var todos []TodoItem
+
+	for rows.Next() {
+		var todo TodoItem
+
+		err := rows.Scan(
+			&todo.Id,
+			&todo.CreatedAt,
+			&todo.Title,
+			&todo.Done,
+		)
+		if err != nil {
+			return nil, err
+		}
+		todos = append(todos, todo)
+	}
+
+	if len(todos) == 0 {
+		return nil, ErrRecordNotFound
+	}
+
+	if queryErr := rows.Err(); queryErr != nil {
+		return nil, queryErr
+	}
+
+	return todos, nil
+}

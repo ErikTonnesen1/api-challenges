@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +20,13 @@ var TodoRequestQueryFilter string = "todoRequestFilter"
 type TodoRequest struct {
 	Title *string `json:"title" binding:"required"`
 	Done  *bool   `json:"done"`
+}
+
+func NewRequest(title string, done bool) TodoRequest {
+	return TodoRequest{
+		Title: helpers.StringPtr(title),
+		Done:  helpers.BoolPtr(done),
+	}
 }
 
 type TodoServicer interface {

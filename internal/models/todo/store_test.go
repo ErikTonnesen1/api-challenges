@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/ErikTonnesen1/api-challenges/internal/database"
-	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/ErikTonnesen1/api-challenges/internal/models/todo"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,10 +42,8 @@ func TestCRUD(t *testing.T) {
 	model := database.New(testDB)
 
 	t.Run("insert ~ should create todo in db", func(t *testing.T) {
-		todo := todo.TodoRequest{
-			Title: helpers.StringPtr("Write tests"),
-			Done:  helpers.BoolPtr(false),
-		}
+		cleanTodos(t, testDB)
+		todo := todo.NewRequest("Write tests", false)
 
 		id, created_at, err := model.Todos.Insert(todo)
 
@@ -63,6 +60,7 @@ func TestCRUD(t *testing.T) {
 	})
 
 	t.Run("Get ~ get by Id should return correct todo", func(t *testing.T) {
+		cleanTodos(t, testDB)
 		testTodo := insertTestTodo(model)
 
 		getResult, err := model.Todos.GetById(testTodo.Id)
@@ -76,7 +74,56 @@ func TestCRUD(t *testing.T) {
 		assert.NotNil(t, getResult.CreatedAt)
 	})
 
+	t.Run("get ~ get all should return all records in todos", func(t *testing.T) {
+		cleanTodos(t, testDB)
+
+		todos := []todo.TodoRequest{
+			todo.NewRequest("first task", false),
+			todo.NewRequest("second task", false),
+			todo.NewRequest("third task", false),
+		}
+
+		insertManyTestTodos(todos, model)
+
+		page, err := model.Todos.GetAll()
+		if err != nil {
+			panic(err)
+		}
+
+		assert.Equal(t, 3, len(page))
+
+		for i, v := range todos {
+			assert.True(t, assertReqToCreated(v, page[i]))
+		}
+	})
+
+	t.Run("get ~ get all with empty db should return `no record found ` err", func(t *testing.T) {
+		cleanTodos(t, testDB)
+
+		_, err := model.Todos.GetAll()
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, todo.ErrRecordNotFound, err)
+	})
+
+	// t.Run("get ~ get all with pagination should return that amount of todos", func(t *testing.T) {
+	// 	insertManyTestTodos([]todo.TodoRequest{
+	// 		todo.NewRequest("first task", false),
+	// 		todo.NewRequest("second task", false),
+	// 		todo.NewRequest("third task", false),
+	// 	}, model)
+	//
+	// 	cursor, err := model.Todos.GetAllPaginated()
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	//
+	// 	assert.Equal(t, 3, len(cursor))
+	//
+	// })
+
 	t.Run("delete ~ delete by Id should delete existing documnets", func(t *testing.T) {
+		cleanTodos(t, testDB)
 		testTodo := insertTestTodo(model)
 
 		err := model.Todos.Delete(testTodo.Id)
@@ -87,12 +134,10 @@ func TestCRUD(t *testing.T) {
 		assert.True(t, errors.Is(err, todo.ErrRecordNotFound))
 	})
 	t.Run("update ~ updating a document should change existing document", func(t *testing.T) {
+		cleanTodos(t, testDB)
 		testTodo := insertTestTodo(model)
 
-		update := todo.TodoRequest{
-			Title: helpers.StringPtr("Finish Tests"),
-			Done:  helpers.BoolPtr(true),
-		}
+		update := todo.NewRequest("Finish Tests", true)
 
 		updated, err := model.Todos.Update(testTodo.Id, update)
 		if err != nil {
@@ -108,13 +153,23 @@ func TestCRUD(t *testing.T) {
 }
 
 func insertTestTodo(model database.Models) todo.TodoItem {
-	testTodo := todo.TodoRequest{
-		Title: helpers.StringPtr("Write tests"),
-		Done:  helpers.BoolPtr(false),
-	}
+	testTodo := todo.NewRequest("Write Tests", false)
 	id, created_at, err := model.Todos.Insert(testTodo)
 	if err != nil {
 		panic(err.Error())
 	}
 	return todo.TodoItem{Id: id, CreatedAt: created_at, Title: *testTodo.Title, Done: *testTodo.Done}
+}
+
+func insertManyTestTodos(arr []todo.TodoRequest, model database.Models) {
+	for _, v := range arr {
+		_, _, err := model.Todos.Insert(v)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func assertReqToCreated(req todo.TodoRequest, item todo.TodoItem) bool {
+	return *req.Title == item.Title && *req.Done == item.Done
 }

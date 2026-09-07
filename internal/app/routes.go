@@ -10,7 +10,7 @@ import (
 
 func (a *Application) StartGin() *gin.Engine {
 	engine := gin.Default()
-	setRoutes(engine)
+	a.setRoutes(engine)
 	return engine
 }
 
@@ -19,8 +19,8 @@ func (a *Application) Serve(engine *gin.Engine) error {
 	return engine.Run(a.Config.Port)
 }
 
-func setRoutes(eng *gin.Engine) {
-	todoService := todo.NewService()
+func (a *Application) setRoutes(eng *gin.Engine) {
+	todoService := todo.NewService(a.Models.Todos)
 	todoHandler := todo.NewHandler(todoService)
 	todos := eng.Group(todo.TodoUri)
 	todos.Use(middleware.Logging(), middleware.RequestValidation())
