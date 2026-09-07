@@ -30,11 +30,8 @@ func TestGetAll(t *testing.T) {
 
 	assert.Equal(t, 2, len(todoItems))
 	assert.Equal(t, len(todoService.TodoItems), len(todoItems))
-	//Cannot assert on todoItem[key] because go iterates thru maps in random order
-	// 		|--> causing intermittent test failures
-
-	// assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], todoItems[0]))
-	// assert.True(t, reflect.DeepEqual(*todoService.TodoItems[2], todoItems[1]))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], todoItems[0]))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[2], todoItems[1]))
 
 }
 
@@ -96,11 +93,8 @@ func TestGetAll_WithDoneQuery(t *testing.T) {
 	foundItems := todoService.GetAll(titleQuery)
 
 	assert.True(t, len(foundItems) == 2)
-	//Cannot assert on todoItem[key] because go iterates thru maps in random order
-	// 		|--> causing intermittent test failures
-
-	// assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], foundItems[0]))
-	// assert.True(t, reflect.DeepEqual(*todoService.TodoItems[2], foundItems[1]))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[1], foundItems[0]))
+	assert.True(t, reflect.DeepEqual(*todoService.TodoItems[2], foundItems[1]))
 }
 
 func TestGetAll_WithTitleAndDoneQuery(t *testing.T) {

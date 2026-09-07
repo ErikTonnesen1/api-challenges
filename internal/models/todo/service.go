@@ -2,6 +2,7 @@ package todo
 
 import (
 	"fmt"
+	"sort"
 )
 
 type TodoService struct {
@@ -22,12 +23,20 @@ func NewService(model TodoModel) *TodoService {
 // So each time this method is called, a different order of values will be returned
 // To return an ordered set, need to collect sorted key list, then return based on that list
 func (s *TodoService) GetAll(queryFilter TodoRequest) []TodoItem {
-	todoItems := make([]TodoItem, 0, len(s.TodoItems))
-
 	titleFilterExists := queryFilter.Title != nil
 	doneFilterExists := queryFilter.Done != nil
 
-	for _, todoPtr := range s.TodoItems {
+	keys := make([]int, 0, len(s.TodoItems))
+	for k := range s.TodoItems {
+		keys = append(keys, k)
+	}
+
+	//maps in go are unordered
+	sort.Ints(keys)
+
+	todoItems := make([]TodoItem, 0, len(s.TodoItems))
+	for _, k := range keys {
+		todoPtr := s.TodoItems[k]
 		if titleFilterExists && todoPtr.Title != *queryFilter.Title {
 			continue
 		}
