@@ -3,6 +3,7 @@ package todo
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -21,18 +22,39 @@ var (
 	ErrRecordNotFound = errors.New("record not found")
 )
 
-func (tm *TodoModel) Insert(t TodoRequest) (id int, created_at time.Time, err error) {
+func (tm *TodoModel) Insert(t TodoRequest) (id int, err error) {
 	query := `
 		INSERT INTO todos (title, done)
 		VALUES ($1, $2)
 		RETURNING id, created_at
 	`
 
-	err = tm.Db.QueryRow(query, t.Title, t.Done).Scan(&id, &created_at)
+	err = tm.Db.QueryRow(query, t.Title, t.Done).Scan(&id)
 	if err != nil {
-		return 0, time.Time{}, err
+		return 0, err
 	}
-	return id, created_at, nil
+	return id, nil
+}
+
+func (tm *TodoModel) Toggle(id int) (TodoItem, error) {
+	query := `
+		UPDATE todos
+		SET done = NOT done
+		WHERE id = $1
+		RETURNING id, title, done, created_at
+	`
+	var t TodoItem
+	err := tm.Db.QueryRow(query, id).Scan(&t.Id, &t.Title, &t.Done, &t.CreatedAt)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return TodoItem{}, ErrRecordNotFound
+		default:
+			return TodoItem{}, nil
+		}
+	}
+	return t, nil
 }
 
 func (tm *TodoModel) Delete(id int) error {
@@ -107,10 +129,11 @@ func (tm *TodoModel) GetById(id int) (*TodoItem, error) {
 	return &todo, nil
 }
 
-func (tm *TodoModel) GetAll() ([]TodoItem, error) {
+func (tm *TodoModel) GetAll(r TodoRequest) ([]TodoItem, error) {
 	query := `
 	SELECT id, created_at, title, done
 	FROM todos
+	ORDER BY id
 	`
 
 	rows, err := tm.Db.Query(query)
@@ -146,4 +169,21 @@ func (tm *TodoModel) GetAll() ([]TodoItem, error) {
 	}
 
 	return todos, nil
+}
+
+func (tm TodoModel) buildGetTodoQuery(t TodoRequest) (string, []interface{}) {
+	query := "SELECT id, title, done, created_at FROM todos WHERE 1=1"
+	args := []interface{}{}
+	argPos := 1
+	if t.Title != nil {
+		query += fmt.Sprintf("AND title = $%d", argPos)
+		args = append(args, *t.Title)
+		argPos++
+	}
+	if t.Done != nil {
+		query += fmt.Sprintf("AND done = $%d", argPos)
+		args = append(args, *t.Done)
+		argPos++
+	}
+	return query, args
 }

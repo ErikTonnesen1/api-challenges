@@ -1,102 +1,63 @@
 package todo
 
-import (
-	"fmt"
-	"sort"
-)
+import ()
 
 type TodoService struct {
-	id_increment int
-	TodoItems    map[int]*TodoItem
-	TodoDB       TodoModel
+	db TodoModel
 }
 
 func NewService(model TodoModel) *TodoService {
 	return &TodoService{
-		id_increment: 1,
-		TodoItems:    make(map[int]*TodoItem),
-		TodoDB:       model,
+		db: model,
 	}
 }
 
-// Side effect: Go iterates over a map in random order
-// So each time this method is called, a different order of values will be returned
-// To return an ordered set, need to collect sorted key list, then return based on that list
-func (s *TodoService) GetAll(queryFilter TodoRequest) []TodoItem {
-	titleFilterExists := queryFilter.Title != nil
-	doneFilterExists := queryFilter.Done != nil
-
-	keys := make([]int, 0, len(s.TodoItems))
-	for k := range s.TodoItems {
-		keys = append(keys, k)
+func (s *TodoService) GetAll(queryFilter TodoRequest) ([]TodoItem, error) {
+	todos, err := s.db.GetAll(queryFilter)
+	if err != nil {
+		return nil, err
 	}
-
-	//maps in go are unordered
-	sort.Ints(keys)
-
-	todoItems := make([]TodoItem, 0, len(s.TodoItems))
-	for _, k := range keys {
-		todoPtr := s.TodoItems[k]
-		if titleFilterExists && todoPtr.Title != *queryFilter.Title {
-			continue
-		}
-		if doneFilterExists && todoPtr.Done != *queryFilter.Done {
-			continue
-		}
-
-		todoItems = append(todoItems, *todoPtr)
-	}
-	return todoItems
+	return todos, nil
 }
 
-func (s *TodoService) AddItem(req TodoRequest) (TodoItem, error) {
-	newTodo := TodoItem{
-		Id:    s.id_increment,
-		Title: *req.Title,
-		Done:  *req.Done,
+func (s *TodoService) AddItem(req TodoRequest) (int, error) {
+	id, err := s.db.Insert(req)
+	if err != nil {
+		return 0, err
 	}
-	s.id_increment++
-	s.TodoItems[newTodo.Id] = &newTodo
-	return newTodo, nil
+
+	return id, nil
 }
 
-func (s *TodoService) GetItem(id int) (TodoItem, error) {
-	todoPtr, ok := s.TodoItems[id]
-	if !ok {
-		return TodoItem{}, fmt.Errorf("todo item with id %d not found", id)
+func (s *TodoService) GetItem(id int) (*TodoItem, error) {
+	todo, err := s.db.GetById(id)
+	if err != nil {
+		return nil, err
+
 	}
-	return *todoPtr, nil
+	return todo, nil
 }
 
-func (s *TodoService) ToggleDone(id int) (TodoItem, error) {
-	todoPtr, ok := s.TodoItems[id]
-	if !ok {
-		return TodoItem{}, fmt.Errorf("Invalid ID: %d", id)
+func (s *TodoService) ToggleDone(id int) (*TodoItem, error) {
+	todo, err := s.db.Toggle(id)
+	if err != nil {
+		return nil, err
 	}
-
-	todoPtr.Done = !todoPtr.Done
-	return *todoPtr, nil
+	return &todo, nil
 }
 
-func (s *TodoService) DeleteTodo(id int) (TodoItem, error) {
-	deleteItemPtr, ok := s.TodoItems[id]
-	if !ok {
-		return TodoItem{}, fmt.Errorf("No TodoItem found for ID: %d", id)
+func (s *TodoService) DeleteTodo(id int) error {
+	err := s.db.Delete(id)
+	if err != nil {
+		return err
 	}
-	delete(s.TodoItems, id)
-	return *deleteItemPtr, nil
+	return nil
 }
 
-func (s *TodoService) ReplaceTodo(id int, replacement TodoRequest) (TodoItem, error) {
-	todoPtr, ok := s.TodoItems[id]
-	if !ok {
-		return TodoItem{}, fmt.Errorf("Could not find item to be replaced with id: %d", id)
+func (s *TodoService) ReplaceTodo(id int, replacement TodoRequest) (*TodoItem, error) {
+	todo, err := s.db.Update(id, replacement)
+	if err != nil {
+		return nil, err
 	}
-	*todoPtr = TodoItem{
-		Id:    todoPtr.Id,
-		Title: *replacement.Title,
-		Done:  *replacement.Done,
-	}
-
-	return *todoPtr, nil
+	return todo, nil
 }
