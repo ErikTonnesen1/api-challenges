@@ -22,18 +22,19 @@ var (
 	ErrRecordNotFound = errors.New("record not found")
 )
 
-func (tm *TodoModel) Insert(t TodoRequest) (id int, err error) {
+func (tm *TodoModel) Insert(t TodoRequest) (*TodoItem, error) {
 	query := `
 		INSERT INTO todos (title, done)
 		VALUES ($1, $2)
-		RETURNING id, created_at
+		RETURNING id, title, done, created_at
 	`
 
-	err = tm.Db.QueryRow(query, t.Title, t.Done).Scan(&id)
+	var todo TodoItem
+	err := tm.Db.QueryRow(query, t.Title, t.Done).Scan(&todo.Id, &todo.Title, &todo.Done, &todo.CreatedAt)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return id, nil
+	return &todo, nil
 }
 
 func (tm *TodoModel) Toggle(id int) (TodoItem, error) {
@@ -129,7 +130,7 @@ func (tm *TodoModel) GetById(id int) (*TodoItem, error) {
 	return &todo, nil
 }
 
-func (tm *TodoModel) GetAll(r TodoRequest) ([]TodoItem, error) {
+func (tm *TodoModel) GetAll(t TodoRequest) ([]TodoItem, error) {
 	query := `
 	SELECT id, created_at, title, done
 	FROM todos

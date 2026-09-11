@@ -1,6 +1,7 @@
 package todo
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -30,12 +31,12 @@ func NewRequest(title string, done bool) TodoRequest {
 }
 
 type TodoServicer interface {
-	GetAll(TodoRequest) []TodoItem
-	GetItem(id int) (TodoItem, error)
-	AddItem(i TodoRequest) (TodoItem, error)
-	ToggleDone(id int) (TodoItem, error)
-	DeleteTodo(id int) (TodoItem, error)
-	ReplaceTodo(id int, replacement TodoRequest) (TodoItem, error)
+	GetAll(TodoRequest) ([]TodoItem, error)
+	GetItem(id int) (*TodoItem, error)
+	AddItem(i TodoRequest) (*TodoItem, error)
+	ToggleDone(id int) (*TodoItem, error)
+	DeleteTodo(id int) error
+	ReplaceTodo(id int, replacement TodoRequest) (*TodoItem, error)
 }
 
 type todoHandler struct {
@@ -50,23 +51,35 @@ func NewHandler(s TodoServicer) *todoHandler {
 
 func (h *todoHandler) GetTodos(c *gin.Context) {
 	queryFilter, filterExists := c.Get(TodoRequestQueryFilter)
+
+	var (
+		todos []TodoItem
+		err   error
+	)
+
 	if filterExists {
-		c.JSON(http.StatusOK, h.service.GetAll(queryFilter.(TodoRequest)))
+		todos, err = h.service.GetAll(queryFilter.(TodoRequest))
 	} else {
-		c.JSON(http.StatusOK, h.service.GetAll(TodoRequest{}))
+		todos, err = h.service.GetAll(TodoRequest{})
 	}
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+	}
+	c.JSON(http.StatusOK, todos)
 }
 
 func (h *todoHandler) CreateTodo(c *gin.Context) {
 	newItem := c.MustGet(TodoRequestContextKey).(TodoRequest)
-	addedItem, err := h.service.AddItem(newItem)
+	todo, err := h.service.AddItem(newItem)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.JSON(http.StatusCreated, addedItem)
+	c.JSON(http.StatusCreated, *todo)
 }
 
 func (h *todoHandler) TodosById(c *gin.Context) {
@@ -79,7 +92,7 @@ func (h *todoHandler) TodosById(c *gin.Context) {
 		})
 		return
 	} else {
-		c.JSON(http.StatusOK, todoItem)
+		c.JSON(http.StatusOK, *todoItem)
 	}
 }
 
@@ -91,18 +104,27 @@ func (h *todoHandler) ToggleDone(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	c.JSON(http.StatusOK, toggledItem)
+	c.JSON(http.StatusOK, *toggledItem)
 }
 
 func (h *todoHandler) DeleteTodo(c *gin.Context) {
 	pathId := c.Param("id")
 	id, err := strconv.Atoi(pathId)
-	deletedItem, err := h.service.DeleteTodo(id)
+	//TODO: Add getParamId helper to return error if id is invalid
+	err = h.service.DeleteTodo(id)
 	if err != nil {
-		c.Status(http.StatusBadRequest)
+		switch {
+		case errors.Is(err, ErrRecordNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+		default:
+			c.Status(http.StatusBadRequest)
+
+		}
 		return
 	}
-	c.JSON(http.StatusOK, deletedItem)
+	c.Status(http.StatusOK)
 }
 
 func (h *todoHandler) ReplaceTodo(c *gin.Context) {
@@ -115,6 +137,6 @@ func (h *todoHandler) ReplaceTodo(c *gin.Context) {
 			"error": err.Error(),
 		})
 	}
-	c.JSON(http.StatusOK, replacedItem)
+	c.JSON(http.StatusOK, *replacedItem)
 
 }

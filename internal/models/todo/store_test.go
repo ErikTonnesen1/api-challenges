@@ -45,18 +45,13 @@ func TestCRUD(t *testing.T) {
 		cleanTodos(t, testDB)
 		todo := todo.NewRequest("Write tests", false)
 
-		id, created_at, err := model.Todos.Insert(todo)
+		inserted, err := model.Todos.Insert(todo)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, id)
-		assert.NotNil(t, created_at)
-
-		insertedItem, err := model.Todos.GetById(id)
-
-		assert.Equal(t, id, insertedItem.Id)
-		assert.Equal(t, *todo.Title, insertedItem.Title)
-		assert.Equal(t, *todo.Done, insertedItem.Done)
-		assert.NotZero(t, insertedItem.Id)
+		assert.NotNil(t, inserted.Id)
+		assert.Equal(t, *todo.Title, inserted.Title)
+		assert.Equal(t, *todo.Done, inserted.Done)
+		assert.NotZero(t, inserted.Id)
 	})
 
 	t.Run("Get ~ get by Id should return correct todo", func(t *testing.T) {
@@ -85,7 +80,7 @@ func TestCRUD(t *testing.T) {
 
 		insertManyTestTodos(todos, model)
 
-		page, err := model.Todos.GetAll()
+		page, err := model.Todos.GetAll(todo.TodoRequest{})
 		if err != nil {
 			panic(err)
 		}
@@ -100,7 +95,7 @@ func TestCRUD(t *testing.T) {
 	t.Run("get ~ get all with empty db should return `no record found ` err", func(t *testing.T) {
 		cleanTodos(t, testDB)
 
-		_, err := model.Todos.GetAll()
+		_, err := model.Todos.GetAll(todo.TodoRequest{})
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, todo.ErrRecordNotFound, err)
@@ -152,18 +147,42 @@ func TestCRUD(t *testing.T) {
 
 }
 
-func insertTestTodo(model database.Models) todo.TodoItem {
+// func TestHelpers(t *testing.T) {
+// 	t.Run("build todo query correctly builds with filters passed", func(t *testing.T) {
+// 		tests := []struct {
+// 			name   string
+// 			filter todo.TodoRequest
+// 		}{
+// 			{name: "no filters passed", filter: todo.TodoRequest{nil, nil}},
+// 			{name: "title filter passed", filter: todo.TodoRequest{helpers.StringPtr("filter1"), nil}},
+// 			{name: "done filter passed", filter: todo.TodoRequest{nil, helpers.BoolPtr(false)}},
+// 			{name: "title & done filter passed", filter: todo.NewRequest("filter1", false)},
+// 		}
+//
+// 		model := database.New(testDB).Todos
+//
+// 		for _, tt := range tests {
+// 			t.Run(tt.name, func(t *testing.T) {
+// 				// query, args := model.buildGetTodoQuery(tt)
+// 				assert.NotNil(t, query)
+// 				assert.NotEmpty(t, args)
+// 			})
+// 		}
+// 	})
+// }
+
+func insertTestTodo(model database.Models) *todo.TodoItem {
 	testTodo := todo.NewRequest("Write Tests", false)
-	id, created_at, err := model.Todos.Insert(testTodo)
+	todo, err := model.Todos.Insert(testTodo)
 	if err != nil {
 		panic(err.Error())
 	}
-	return todo.TodoItem{Id: id, CreatedAt: created_at, Title: *testTodo.Title, Done: *testTodo.Done}
+	return todo
 }
 
 func insertManyTestTodos(arr []todo.TodoRequest, model database.Models) {
 	for _, v := range arr {
-		_, _, err := model.Todos.Insert(v)
+		_, err := model.Todos.Insert(v)
 		if err != nil {
 			panic(err)
 		}

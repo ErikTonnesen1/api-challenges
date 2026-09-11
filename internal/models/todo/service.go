@@ -20,13 +20,13 @@ func (s *TodoService) GetAll(queryFilter TodoRequest) ([]TodoItem, error) {
 	return todos, nil
 }
 
-func (s *TodoService) AddItem(req TodoRequest) (int, error) {
-	id, err := s.db.Insert(req)
+func (s *TodoService) AddItem(req TodoRequest) (*TodoItem, error) {
+	todo, err := s.db.Insert(req)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return id, nil
+	return todo, nil
 }
 
 func (s *TodoService) GetItem(id int) (*TodoItem, error) {
