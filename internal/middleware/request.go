@@ -11,7 +11,6 @@ import (
 
 func RequestValidation() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		if id := c.Param("id"); id != "" {
 			if _, err := strconv.Atoi(id); err != nil {
 				throwBadRequestError(c, "ID must be of type int")
