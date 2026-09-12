@@ -5,47 +5,51 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/ErikTonnesen1/api-challenges/internal/models/todo"
+	"github.com/ErikTonnesen1/api-challenges/internal/validator"
 	"github.com/gin-gonic/gin"
 )
 
 func RequestValidation() gin.HandlerFunc {
+	v := validator.New()
+
 	return func(c *gin.Context) {
 		if id := c.Param("id"); id != "" {
-			if _, err := strconv.Atoi(id); err != nil {
-				throwBadRequestError(c, "ID must be of type int")
-				return
-			}
+			_, err := strconv.Atoi(id)
+			v.Check(err == nil, "id", "id must be of type int")
 		}
 
-		if c.Request.Method == http.MethodPost ||
-			c.Request.Method == http.MethodPut {
+		if c.Request.Method == http.MethodPost || c.Request.Method == http.MethodPut {
 			var requestTodo todo.TodoRequest
-			if err := c.ShouldBindJSON(&requestTodo); err != nil {
-				throwBadRequestError(c, fmt.Sprintf("Could not parse JSON: %s", err))
-				return
-			}
-
+			err := helpers.ReadJson(c.Writer, c.Request, &requestTodo)
+			v.Check(err == nil, "json", fmt.Sprintf("could not parse json: %s", err))
 			c.Set(todo.TodoRequestContextKey, requestTodo)
 		}
-
+		if !v.Valid() {
+			throwBadRequestError(c, v.Errors)
+			return
+		}
+		v.Clear()
 		c.Next()
 	}
 }
 
 func QueryFilterValidation() gin.HandlerFunc {
+	v := validator.New()
 	return func(c *gin.Context) {
-		//If passed query params
 		var titleFilter *string = nil
 		var doneFilter *bool = nil
+
 		if tFilter := c.Query("title"); tFilter != "" {
 			titleFilter = &tFilter
 		}
 
 		if dFilter := c.Query("done"); dFilter != "" {
 			doneQueryParam, err := strconv.ParseBool(dFilter)
-			if err != nil {
-				throwBadRequestError(c, "'done' query param must be of type bool")
+			v.Check(err == nil, "done", "done must be of type bool")
+			if !v.Valid() {
+				throwBadRequestError(c, v.Errors)
 				return
 			}
 			doneFilter = &doneQueryParam
@@ -56,8 +60,6 @@ func QueryFilterValidation() gin.HandlerFunc {
 	}
 }
 
-func throwBadRequestError(c *gin.Context, errorMsg string) {
-	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-		"error": errorMsg,
-	})
+func throwBadRequestError(c *gin.Context, errors map[string]string) {
+	c.AbortWithStatusJSON(http.StatusBadRequest, errors)
 }

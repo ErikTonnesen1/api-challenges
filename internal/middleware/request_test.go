@@ -51,7 +51,7 @@ func Test_ifInvalidId_thenReturn400(t *testing.T) {
 	var jsonResponse map[string]any
 	json.NewDecoder(r.Body).Decode(&jsonResponse)
 
-	assert.Equal(t, "ID must be of type int", jsonResponse["error"])
+	assert.Equal(t, "id must be of type int", jsonResponse["id"])
 
 }
 
@@ -95,7 +95,7 @@ func Test_ifPostMethod_andRequestBodyIsInValid_thenReturn400(t *testing.T) {
 
 	var jsonResponse map[string]any
 	json.NewDecoder(rw.Body).Decode(&jsonResponse)
-	assert.True(t, strings.Contains(jsonResponse["error"].(string), "Could not parse JSON:"))
+	assert.True(t, strings.Contains(jsonResponse["json"].(string), "could not parse json:"))
 }
 
 func getHappyPathMwChain(httpMethod string, uri string, handlers ...gin.HandlerFunc) (*gin.Engine, *testState) {
