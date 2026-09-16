@@ -1,0 +1,16 @@
+# List of Todos
+Challenge #3
+- [ ] Intermittent failures in servive_test.go
+
+```
+--- FAIL: TestGetAll (0.00s)
+    service_test.go:32: 
+                Error Trace:    /Users/eriktonnesen/dev/projects/api-challenges/internal/models/todo/service_test.go:32
+                Error:          Should be true
+                Test:           TestGetAll
+    service_test.go:33: 
+                Error Trace:    /Users/eriktonnesen/dev/projects/api-challenges/internal/models/todo/service_test.go:33
+                Error:          Should be true
+                Test:           TestGetAll
+```
+

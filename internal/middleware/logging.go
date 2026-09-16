@@ -13,7 +13,7 @@ func Logging() gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 
-		log.Printf("%s: %s ~ [%d ms, || %d mu]",
+		log.Printf("%s: %s ~ [%d ms || %d mu]",
 			c.Request.Method,
 			c.Request.URL,
 			time.Since(start).Milliseconds(),

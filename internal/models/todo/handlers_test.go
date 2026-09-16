@@ -6,22 +6,22 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"testing"
 
-	"github.com/ErikTonnesen1/api-challenges/internal/util"
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 // Set Gin in TestMode for better test log output
-func TestMain(m *testing.M) {
+func SetupGinInTestMode(t *testing.T) {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
-	os.Exit(m.Run())
 }
 
 func TestGetTodos(t *testing.T) {
+	SetupGinInTestMode(t)
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, TodoUri, nil))
 
 	//Given
@@ -38,9 +38,10 @@ func TestGetTodos(t *testing.T) {
 				Done:  true,
 			},
 		},
+		ErrorResult: nil,
 	}
 
-	h := NewTodoHandler(&mockTService)
+	h := NewHandler(&mockTService)
 	//When
 	h.GetTodos(context)
 
@@ -59,6 +60,7 @@ func TestGetTodos(t *testing.T) {
 }
 
 func TestGetTodos_Empty(t *testing.T) {
+	SetupGinInTestMode(t)
 	//Given
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, TodoUri, nil))
 
@@ -66,7 +68,7 @@ func TestGetTodos_Empty(t *testing.T) {
 		GetAllResult: []TodoItem{},
 	}
 
-	h := NewTodoHandler(&mockTService)
+	h := NewHandler(&mockTService)
 
 	//When
 	h.GetTodos(context)
@@ -84,6 +86,7 @@ func TestGetTodos_Empty(t *testing.T) {
 }
 
 func TestCreateTodo(t *testing.T) {
+	SetupGinInTestMode(t)
 	//Given
 	mockService := MockTodoService{
 		AddItemResult: TodoItem{
@@ -93,9 +96,9 @@ func TestCreateTodo(t *testing.T) {
 		},
 	}
 
-	createItemRequest := TodoItemRequest{
-		Title: util.String("Test Create"),
-		Done:  util.Bool(false),
+	createItemRequest := TodoRequest{
+		Title: helpers.StringPtr("Test Create"),
+		Done:  helpers.BoolPtr(false),
 	}
 
 	reqBody, err := json.Marshal(createItemRequest)
@@ -105,24 +108,23 @@ func TestCreateTodo(t *testing.T) {
 	rw, context := setupRouter(httptest.NewRequest(http.MethodPost, TodoUri, bytes.NewBuffer(reqBody)))
 	context.Set(TodoRequestContextKey, createItemRequest)
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	h.CreateTodo(context)
 
-	var resultTodo TodoItem
-	err = json.NewDecoder(rw.Body).Decode(&resultTodo)
+	var result TodoItem
+	err = json.NewDecoder(rw.Body).Decode(&result)
 	if err != nil {
 		log.Printf("Could not decode returned Json: %v", err)
 	}
 
 	assert.Equal(t, http.StatusCreated, rw.Result().StatusCode)
 	assert.Equal(t, "application/json; charset=utf-8", rw.Header().Get("Content-Type"))
-	assert.Equal(t, mockService.AddItemResult, resultTodo)
-	assert.Equal(t, *createItemRequest.Title, resultTodo.Title)
-	assert.Equal(t, *createItemRequest.Done, resultTodo.Done)
+	assert.ObjectsAreEqual(mockService.AddItemResult, result)
 }
 
 func TestTodosById(t *testing.T) {
+	SetupGinInTestMode(t)
 	mockService := MockTodoService{
 		GetItemResult: TodoItem{
 			Id:    1,
@@ -131,7 +133,7 @@ func TestTodosById(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodGet, "/todos/1", nil))
 
@@ -150,6 +152,7 @@ func TestTodosById(t *testing.T) {
 }
 
 func TestToggleDone(t *testing.T) {
+	SetupGinInTestMode(t)
 	mockService := MockTodoService{
 		ToggleDoneResult: TodoItem{
 			Id:    1,
@@ -158,7 +161,7 @@ func TestToggleDone(t *testing.T) {
 		},
 	}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodPatch, "/todos/1", nil))
 
@@ -177,29 +180,16 @@ func TestToggleDone(t *testing.T) {
 }
 
 func TestDeleteTodo(t *testing.T) {
-	mockService := MockTodoService{
-		DeleteTodoResult: TodoItem{
-			Id:    1,
-			Title: "Test Delete",
-			Done:  false,
-		},
-	}
+	SetupGinInTestMode(t)
+	mockService := MockTodoService{}
 
-	h := NewTodoHandler(&mockService)
+	h := NewHandler(&mockService)
 
 	rw, context := setupRouter(httptest.NewRequest(http.MethodDelete, "/todos/1", nil))
 
 	h.DeleteTodo(context)
 
-	var returnedTodo TodoItem
-	err := json.NewDecoder(rw.Body).Decode(&returnedTodo)
-	if err != nil {
-		log.Printf("Error decoding json: %v", err)
-	}
-
 	assert.Equal(t, http.StatusOK, rw.Result().StatusCode)
-	assert.Equal(t, "application/json; charset=utf-8", rw.Header().Get("Content-Type"))
-	assert.True(t, reflect.DeepEqual(mockService.DeleteTodoResult, returnedTodo))
 }
 
 func setupRouter(req *http.Request) (*httptest.ResponseRecorder, *gin.Context) {
@@ -214,31 +204,30 @@ type MockTodoService struct {
 	GetItemResult    TodoItem
 	AddItemResult    TodoItem
 	ToggleDoneResult TodoItem
-	DeleteTodoResult TodoItem
 	ErrorResult      error
 	ReplaceResult    TodoItem
 }
 
-func (m *MockTodoService) GetAll(queryFilter TodoItemRequest) []TodoItem {
-	return m.GetAllResult
+func (m *MockTodoService) GetAll(queryFilter TodoRequest) ([]TodoItem, error) {
+	return m.GetAllResult, m.ErrorResult
 }
-func (m *MockTodoService) GetItem(id int) (TodoItem, error) {
-	return m.GetItemResult, m.ErrorResult
-}
-
-func (m *MockTodoService) AddItem(i TodoItemRequest) (TodoItem, error) {
-	return m.AddItemResult, m.ErrorResult
+func (m *MockTodoService) GetItem(id int) (*TodoItem, error) {
+	return &m.GetItemResult, m.ErrorResult
 }
 
-func (m *MockTodoService) ToggleDone(id int) (TodoItem, error) {
+func (m *MockTodoService) AddItem(i TodoRequest) (*TodoItem, error) {
+	return &m.AddItemResult, m.ErrorResult
+}
+
+func (m *MockTodoService) ToggleDone(id int) (*TodoItem, error) {
 
 	m.ToggleDoneResult.Done = !m.ToggleDoneResult.Done
 
-	return m.ToggleDoneResult, m.ErrorResult
+	return &m.ToggleDoneResult, m.ErrorResult
 }
-func (m *MockTodoService) DeleteTodo(id int) (TodoItem, error) {
-	return m.DeleteTodoResult, m.ErrorResult
+func (m *MockTodoService) DeleteTodo(id int) error {
+	return m.ErrorResult
 }
-func (m *MockTodoService) ReplaceTodo(id int, replacement TodoItemRequest) (TodoItem, error) {
-	return m.ReplaceResult, m.ErrorResult
+func (m *MockTodoService) ReplaceTodo(id int, replacement TodoRequest) (*TodoItem, error) {
+	return &m.ReplaceResult, m.ErrorResult
 }

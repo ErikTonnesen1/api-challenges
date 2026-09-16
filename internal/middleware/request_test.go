@@ -1,4 +1,4 @@
-package todo
+package middleware
 
 import (
 	"bytes"
@@ -9,7 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ErikTonnesen1/api-challenges/internal/util"
+	"github.com/ErikTonnesen1/api-challenges/internal/helpers"
+	"github.com/ErikTonnesen1/api-challenges/internal/models/todo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +51,7 @@ func Test_ifInvalidId_thenReturn400(t *testing.T) {
 	var jsonResponse map[string]any
 	json.NewDecoder(r.Body).Decode(&jsonResponse)
 
-	assert.Equal(t, "ID must be of type int", jsonResponse["error"])
+	assert.Equal(t, "id must be of type int", jsonResponse["id"])
 
 }
 
@@ -58,16 +59,16 @@ func Test_ifPostMethod_andRequestBodyIsValid_thenReturn200(t *testing.T) {
 	//Given
 	rw := httptest.NewRecorder()
 
-	validTodoItemRequest := TodoItemRequest{
-		Title: util.String("Test Validation Json Handling"),
-		Done:  util.Bool(false),
+	validTodoItemRequest := todo.TodoRequest{
+		Title: helpers.StringPtr("Test Validation Json Handling"),
+		Done:  helpers.BoolPtr(false),
 	}
 
-	rtr, state := getHappyPathMwChain(http.MethodPost, TodoUri, RequestValidation())
+	rtr, state := getHappyPathMwChain(http.MethodPost, todo.TodoUri, RequestValidation())
 
 	validRequestAsJson, _ := json.Marshal(validTodoItemRequest)
 
-	request := httptest.NewRequest(http.MethodPost, TodoUri, bytes.NewBuffer(validRequestAsJson))
+	request := httptest.NewRequest(http.MethodPost, todo.TodoUri, bytes.NewBuffer(validRequestAsJson))
 	rtr.ServeHTTP(rw, request)
 
 	assert.Equal(t, rw.Code, http.StatusAccepted)
@@ -82,11 +83,11 @@ func Test_ifPostMethod_andRequestBodyIsInValid_thenReturn400(t *testing.T) {
 		"RandomField": "RandomFieldValue",
 	}
 
-	rtr, state := getHappyPathMwChain(http.MethodPost, TodoUri, RequestValidation())
+	rtr, state := getHappyPathMwChain(http.MethodPost, todo.TodoUri, RequestValidation())
 
 	invalidRequestAsJson, _ := json.Marshal(invalidTodoItemRequest)
 
-	request := httptest.NewRequest(http.MethodPost, TodoUri, bytes.NewBuffer(invalidRequestAsJson))
+	request := httptest.NewRequest(http.MethodPost, todo.TodoUri, bytes.NewBuffer(invalidRequestAsJson))
 	rtr.ServeHTTP(rw, request)
 
 	assert.Equal(t, rw.Code, http.StatusBadRequest)
@@ -94,7 +95,7 @@ func Test_ifPostMethod_andRequestBodyIsInValid_thenReturn400(t *testing.T) {
 
 	var jsonResponse map[string]any
 	json.NewDecoder(rw.Body).Decode(&jsonResponse)
-	assert.True(t, strings.Contains(jsonResponse["error"].(string), "Could not parse JSON:"))
+	assert.True(t, strings.Contains(jsonResponse["json"].(string), "could not parse json:"))
 }
 
 func getHappyPathMwChain(httpMethod string, uri string, handlers ...gin.HandlerFunc) (*gin.Engine, *testState) {
@@ -105,7 +106,7 @@ func getHappyPathMwChain(httpMethod string, uri string, handlers ...gin.HandlerF
 		state.nextHandlerCalled = true
 		c.Status(http.StatusAccepted)
 		if httpMethod == http.MethodPost {
-			_, ok := c.Get(TodoRequestContextKey)
+			_, ok := c.Get(todo.TodoRequestContextKey)
 			state.requestBodyValidated = ok
 		}
 	})
