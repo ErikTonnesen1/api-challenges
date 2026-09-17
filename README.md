@@ -4,6 +4,136 @@ A progressive series of challenges for two developers learning to build and conn
 
 ---
 
+
+# How to Run
+
+1. Set up a local PostgreSQL instance and create a database named `api_challenges`.
+
+2. Create a PostgreSQL user and assign the user as the owner of the `api_challenges` database.
+
+3. Create a PostgreSQL DSN using the username and password from the previous step:
+
+   ```text
+   postgres://<username>:<password>@localhost/api_challenges
+   ```
+
+   If you encounter SSL connection issues, append `?sslmode=disable`:
+
+   ```text
+   postgres://<username>:<password>@localhost/api_challenges?sslmode=disable
+   ```
+
+4. Set the `APICH_DSN` environment variable to the DSN:
+
+   ```bash
+   export APICH_DSN="postgres://<username>:<password>@localhost/api_challenges?sslmode=disable"
+   ```
+
+5. Run the application:
+
+   ```bash
+   go run ./cmd/api
+   ```
+
+
+# Available Endpoints
+
+Base URL: `http://localhost:3000` (default port, override with `-port`)
+
+All endpoints are prefixed with `/todos`. Responses are JSON (except `DELETE`, which returns an empty body).
+
+## Todo object
+
+```json
+{
+  "id": 1,
+  "title": "Buy groceries",
+  "done": false,
+  "created_at": "2026-09-17T12:00:00Z"
+}
+```
+
+## Routes
+
+| Method   | Path          | Description                                    |
+|----------|---------------|------------------------------------------------|
+| `GET`    | `/todos`      | List all todos                                 |
+| `GET`    | `/todos/:id`  | Get a single todo by id                        |
+| `POST`   | `/todos`      | Create a new todo                              |
+| `PATCH`  | `/todos/:id`  | Toggle a todo's `done` status                  |
+| `PUT`    | `/todos/:id`  | Replace a todo (full update)                   |
+| `DELETE` | `/todos/:id`  | Delete a todo                                  |
+
+## Request body
+
+`POST /todos` and `PUT /todos/:id` accept a JSON body:
+
+```json
+{
+  "title": "Buy groceries",
+  "done": false
+}
+```
+
+- `title` — `string`, **required**
+- `done` — `boolean`, optional (defaults to `false`)
+
+Unknown fields are rejected with a `400`. Body is limited to 1 MB.
+
+## Query parameters
+
+`GET /todos` supports optional filters (both may be combined):
+
+| Param   | Type      | Description                           |
+|---------|-----------|---------------------------------------|
+| `title` | `string`  | Exact-match filter on the title       |
+| `done`  | `boolean` | Filter by done status (`true`/`false`) |
+
+Example: `GET /todos?done=false`
+
+Invalid `done` values (e.g. `?done=yes`) return `400`.
+
+## Response codes
+
+| Endpoint          | Success                             | Errors                                        |
+|-------------------|-------------------------------------|-----------------------------------------------|
+| `GET /todos`      | `200` — array of todo objects       | `400` — `{"error": "..."}`                    |
+| `GET /todos/:id`  | `200` — todo object                 | `404` — `{"error": "record not found"}`       |
+| `POST /todos`     | `201` — created todo object         | `400` — validation/parse errors               |
+| `PATCH /todos/:id`| `200` — toggled todo object         | `400` — empty body (no error message)         |
+| `PUT /todos/:id`  | `200` — replaced todo object        | `400` — `{"error": "..."}`                    |
+| `DELETE /todos/:id`| `200` — empty body                  | `404` — `{"error": "record not found"}`, else `400` |
+
+## Examples
+
+```bash
+# List all todos
+curl http://localhost:3000/todos
+
+# List only todos that are not done
+curl "http://localhost:3000/todos?done=false"
+
+# Get one todo
+curl http://localhost:3000/todos/1
+
+# Create a todo
+curl -X POST http://localhost:3000/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Buy groceries", "done": false}'
+
+# Toggle a todo's done status
+curl -X PATCH http://localhost:3000/todos/1
+
+# Replace a todo
+curl -X PUT http://localhost:3000/todos/1 \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Buy groceries", "done": true}'
+
+# Delete a todo
+curl -X DELETE http://localhost:3000/todos/1
+```
+
+# Challenges
 ## Challenge 1 — Hello, Server
 
 **Difficulty:** Beginner
