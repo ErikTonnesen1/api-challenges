@@ -17,11 +17,11 @@ Build your first HTTP server in Go using the standard `net/http` package (no fra
 
 Create a simple REST API for a to-do list stored **in memory** (no database). The server must support the following endpoints:
 
-| Method | Path         | Description              |
-|--------|--------------|--------------------------|
-| GET    | `/todos`     | Return all to-do items   |
-| POST   | `/todos`     | Create a new to-do item  |
-| GET    | `/todos/:id` | Return a single to-do    |
+| Method | Path         | Description             |
+| ------ | ------------ | ----------------------- |
+| GET    | `/todos`     | Return all to-do items  |
+| POST   | `/todos`     | Create a new to-do item |
+| GET    | `/todos/:id` | Return a single to-do   |
 
 A to-do item has this shape:
 
@@ -35,11 +35,11 @@ A to-do item has this shape:
 
 ### Requirements
 
-- Use only the Go standard library (`net/http`, `encoding/json`)
-- IDs should be auto-incremented integers
-- All responses must be `Content-Type: application/json`
-- Return appropriate HTTP status codes (`200`, `201`, `404`)
-- Data does not need to persist between server restarts
+* Use only the Go standard library (`net/http`, `encoding/json`)
+* IDs should be auto-incremented integers
+* All responses must be `Content-Type: application/json`
+* Return appropriate HTTP status codes (`200`, `201`, `404`)
+* Data does not need to persist between server restarts
 
 ### Expected Behavior
 
@@ -69,8 +69,8 @@ curl http://localhost:8080/todos/99
 
 ### Stretch Goals
 
-- Add a `DELETE /todos/:id` endpoint
-- Add a `PATCH /todos/:id` endpoint to toggle `done`
+* Add a `DELETE /todos/:id` endpoint
+* Add a `PATCH /todos/:id` endpoint to toggle `done`
 
 ---
 
@@ -87,16 +87,16 @@ Rebuild the to-do API from Challenge 1 using the [Gin](https://github.com/gin-go
 
 Recreate all endpoints from Challenge 1, then add:
 
-| Method | Path         | Description                    |
-|--------|--------------|--------------------------------|
-| PUT    | `/todos/:id` | Replace a to-do item entirely  |
-| DELETE | `/todos/:id` | Remove a to-do item            |
+| Method | Path         | Description                   |
+| ------ | ------------ | ----------------------------- |
+| PUT    | `/todos/:id` | Replace a to-do item entirely |
+| DELETE | `/todos/:id` | Remove a to-do item           |
 
 ### Requirements
 
-- Use Gin for routing and handler context
-- Validate incoming request bodies — a `POST` with no `title` should return `400 Bad Request`
-- Return consistent error response envelopes:
+* Use Gin for routing and handler context
+* Validate incoming request bodies — a `POST` with no `title` should return `400 Bad Request`
+* Return consistent error response envelopes:
 
 ```json
 {
@@ -104,9 +104,9 @@ Recreate all endpoints from Challenge 1, then add:
 }
 ```
 
-- Use Gin's `ShouldBindJSON` for request parsing
-- Organize your code into at least two files: `main.go` and `handlers.go`
-- Write integration tests using `httptest` that verify each route is wired correctly
+* Use Gin's `ShouldBindJSON` for request parsing
+* Organize your code into at least two files: `main.go` and `handlers.go`
+* Write integration tests using `httptest` that verify each route is wired correctly
 
 ### Testing
 
@@ -159,39 +159,61 @@ curl -X DELETE http://localhost:8080/todos/1
 
 ### Stretch Goals
 
-- Add query param filtering: `GET /todos?done=true`
-- Add basic request logging middleware that prints the method, path, and duration
+* Add query param filtering: `GET /todos?done=true`
+* Add basic request logging middleware that prints the method, path, and duration
 
 ---
 
-## Challenge 3 — Persisting Data with SQLite
+## Challenge 3 — Persisting Data with PostgreSQL
 
 **Difficulty:** Intermediate
 **Estimated Time:** 2–4 hours
 
 ### The Problem
 
-Replace the in-memory store with a real database. You'll connect your Gin API to SQLite using the `database/sql` package with the `mattn/go-sqlite3` driver and learn how to manage schema and perform CRUD operations against an actual database.
+Replace the in-memory store with a real database. You'll connect your Gin API to PostgreSQL using the `database/sql` package with the PostgreSQL driver and learn how to manage schema and perform CRUD operations against an actual relational database.
 
 ### What to Build
 
-Extend the to-do API so that all data persists to a SQLite file (`todos.db`). The API surface stays the same, but the storage layer moves to SQL.
+Extend the to-do API so that all data persists to PostgreSQL. The API surface stays the same, but the storage layer moves to SQL.
 
 ### Requirements
 
-- Use `database/sql` with `github.com/mattn/go-sqlite3`
-- Create the `todos` table on server startup if it doesn't exist
-- All CRUD endpoints must read from and write to the database
-- Wrap your DB access in a simple repository struct (e.g., `TodoRepository`) to keep handlers clean
-- Handle SQL errors gracefully — don't let a DB error panic the server
+* Use `database/sql` with `github.com/lib/pq`
+* Run PostgreSQL locally using a native installation or Docker
+* Create the `todos` table on server startup if it doesn't exist
+* All CRUD endpoints must read from and write to the database
+* Wrap your DB access in a simple repository struct (e.g., `TodoRepository`) to keep handlers clean
+* Handle SQL errors gracefully — don't let a DB error panic the server
+* Store the PostgreSQL connection string in an environment variable rather than hard-coding credentials
+
+### Database Setup
+
+You can run PostgreSQL locally with Docker:
+
+```bash
+docker run --name todos-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=todos \
+  -p 5432:5432 \
+  -d postgres
+```
+
+Your application should connect using a connection string similar to:
+
+```bash
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/todos?sslmode=disable"
+```
 
 ### Schema
 
 ```sql
 CREATE TABLE IF NOT EXISTS todos (
-  id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  done  INTEGER NOT NULL DEFAULT 0
+  id         SERIAL PRIMARY KEY,
+  title      TEXT NOT NULL,
+  done       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -200,21 +222,25 @@ CREATE TABLE IF NOT EXISTS todos (
 All behavior from Challenge 2 should be preserved, but now restarting the server should retain previously created todos.
 
 ```bash
-# Create and restart server — data survives
+# Create a todo
 curl -X POST http://localhost:8080/todos \
   -d '{"title": "Persisted!"}' \
   -H "Content-Type: application/json"
+# → 201 Created
 # → {"id": 1, "title": "Persisted!", "done": false}
 
 # Restart the server, then:
 curl http://localhost:8080/todos
+# → 200 OK
 # → [{"id": 1, "title": "Persisted!", "done": false}]
 ```
 
 ### Stretch Goals
 
-- Add pagination: `GET /todos?page=1&limit=10`
-- Add a `created_at` timestamp column and return it in responses
+* Add pagination: `GET /todos?page=1&limit=10`
+* Add database migrations instead of creating the schema directly on startup
+* Add indexes and investigate the query plans with `EXPLAIN`
+* Add a `created_at` timestamp column and return it in responses
 
 ---
 
@@ -232,7 +258,7 @@ Secure your API. You'll build a user registration and login system, issue JSON W
 Add an `auth` layer to the existing API:
 
 | Method | Path             | Description                          |
-|--------|------------------|--------------------------------------|
+| ------ | ---------------- | ------------------------------------ |
 | POST   | `/auth/register` | Create a new user account            |
 | POST   | `/auth/login`    | Authenticate and receive a JWT token |
 
@@ -240,23 +266,39 @@ Then protect all `/todos` routes so they require a valid `Authorization: Bearer 
 
 ### Requirements
 
-- Use `golang-jwt/jwt` for token creation and verification
-- Store users in SQLite with hashed passwords (use `golang.org/x/crypto/bcrypt`)
-- Associate todos with a `user_id` foreign key
-- Write a Gin middleware (`AuthMiddleware`) that validates the token and sets the user on the request context
-- Tokens should expire after 24 hours
+* Use `golang-jwt/jwt` for token creation and verification
+* Store users in PostgreSQL with hashed passwords (use `golang.org/x/crypto/bcrypt`)
+* Associate todos with a `user_id` foreign key
+* Write a Gin middleware (`AuthMiddleware`) that validates the token and sets the user on the request context
+* Tokens should expire after 24 hours
+* Use PostgreSQL transactions where appropriate
 
-### Schema Additions
+### Schema
+
+Update the database schema to include users and associate todos with their owners:
 
 ```sql
 CREATE TABLE IF NOT EXISTS users (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  id            SERIAL PRIMARY KEY,
   email         TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL
+  password_hash TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Add user_id to todos
-ALTER TABLE todos ADD COLUMN user_id INTEGER REFERENCES users(id);
+ALTER TABLE todos
+ADD COLUMN user_id INTEGER REFERENCES users(id);
+```
+
+For a fresh database, you can instead define the relationship directly in the original table:
+
+```sql
+CREATE TABLE IF NOT EXISTS todos (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  done       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
 ### Expected Behavior
@@ -289,8 +331,10 @@ curl http://localhost:8080/todos
 
 ### Stretch Goals
 
-- Add a `POST /auth/refresh` endpoint to issue a new token
-- Return `403 Forbidden` (not `404`) when a user tries to access another user's todo by ID
+* Add a `POST /auth/refresh` endpoint to issue a new token
+* Return `403 Forbidden` (not `404`) when a user tries to access another user's todo by ID
+* Add a database transaction around user registration and any related operations
+* Add a unique index on user email if it isn't already enforced by the constraint
 
 ---
 
@@ -309,7 +353,7 @@ Production APIs need more than just CRUD. In this challenge you'll add two real-
 
 When a user marks a to-do as `done`, queue a "notification" job. A background worker goroutine should pick up the job and log a message simulating an email send:
 
-```
+```text
 [notifier] Sending email to dev@example.com: "Buy groceries" is complete!
 ```
 
@@ -327,12 +371,12 @@ Add a middleware that limits each IP address to **60 requests per minute**. Requ
 
 ### Requirements
 
-- The notification channel must be buffered (capacity: 100)
-- The worker goroutine must handle a server shutdown signal gracefully (use `context.Context` or `os.Signal`)
-- Rate limiting must be per-IP
-- Use a sliding window or token bucket approach (you may use `golang.org/x/time/rate`)
-- Rate limit state is in-memory (no Redis required)
-- Both features must work correctly alongside the JWT auth from Challenge 4
+* The notification channel must be buffered (capacity: 100)
+* The worker goroutine must handle a server shutdown signal gracefully (use `context.Context` or `os.Signal`)
+* Rate limiting must be per-IP
+* Use a sliding window or token bucket approach (you may use `golang.org/x/time/rate`)
+* Rate limit state is in-memory (no Redis required)
+* Both features must work correctly alongside the JWT auth from Challenge 4
 
 ### Expected Behavior
 
@@ -355,9 +399,9 @@ for i in $(seq 1 65); do curl -s -o /dev/null -w "%{http_code}\n" http://localho
 
 ### Stretch Goals
 
-- Make the rate limit configurable via environment variable (`RATE_LIMIT_RPM`)
-- Add a `/health` endpoint that is exempt from rate limiting and returns server uptime
-- Write a test that spins up the server and verifies the rate limiter behavior
+* Make the rate limit configurable via environment variable (`RATE_LIMIT_RPM`)
+* Add a `/health` endpoint that is exempt from rate limiting and returns server uptime
+* Write a test that spins up the server and verifies the rate limiter behavior
 
 ---
 
@@ -376,10 +420,10 @@ This will feel different from backend code. You're not writing procedures that r
 
 A single-page todo app using [Vite](https://vitejs.dev/) + React that connects to your Go API.
 
-- Display all todos in a list
-- Add a new todo via a form
-- Toggle a todo's `done` state
-- Delete a todo
+* Display all todos in a list
+* Add a new todo via a form
+* Toggle a todo's `done` state
+* Delete a todo
 
 ### Setup
 
@@ -405,11 +449,11 @@ r.Use(cors.New(cors.Config{
 
 ### Requirements
 
-- Use `axios` for all API calls
-- Use `useState` to store your todos list locally after fetching
-- Use `useEffect` to fetch todos when the component first mounts
-- Break the UI into at least three components: `TodoList`, `TodoItem`, `AddTodoForm`
-- No CSS frameworks required — basic inline styles or a plain CSS file is fine
+* Use `axios` for all API calls
+* Use `useState` to store your todos list locally after fetching
+* Use `useEffect` to fetch todos when the component first mounts
+* Break the UI into at least three components: `TodoList`, `TodoItem`, `AddTodoForm`
+* No CSS frameworks required — basic inline styles or a plain CSS file is fine
 
 ### Key Concepts to Understand
 
@@ -428,16 +472,16 @@ useEffect(() => {
 
 ### Expected Behavior
 
-- Page loads and displays all existing todos from the API
-- Submitting the form creates a new todo and it appears in the list
-- Clicking a toggle button updates `done` state via the API and reflects in the UI
-- Clicking delete removes the todo from the list
+* Page loads and displays all existing todos from the API
+* Submitting the form creates a new todo and it appears in the list
+* Clicking a toggle button updates `done` state via the API and reflects in the UI
+* Clicking delete removes the todo from the list
 
 ### Stretch Goals
 
-- Add a loading spinner while the initial fetch is in progress
-- Add an error message if the API is unreachable
-- Filter todos by `done` state with tab buttons (All / Active / Completed)
+* Add a loading spinner while the initial fetch is in progress
+* Add an error message if the API is unreachable
+* Filter todos by `done` state with tab buttons (All / Active / Completed)
 
 ---
 
@@ -480,10 +524,10 @@ function App() {
 
 ### Requirements
 
-- Replace all `useState` + `useEffect` + `axios` fetch logic with `useQuery` for reads
-- Replace all manual POST/PATCH/DELETE calls with `useMutation`
-- After a successful mutation (create, update, delete), invalidate the todos query so the list refreshes automatically
-- Handle loading and error states using the values returned by `useQuery`
+* Replace all `useState` + `useEffect` + `axios` fetch logic with `useQuery` for reads
+* Replace all manual POST/PATCH/DELETE calls with `useMutation`
+* After a successful mutation (create, update, delete), invalidate the todos query so the list refreshes automatically
+* Handle loading and error states using the values returned by `useQuery`
 
 ### Key Concepts to Understand
 
@@ -513,13 +557,13 @@ const deleteMutation = useMutation({
 
 All behavior from Challenge 6 is preserved. Additionally:
 
-- If you open the app in two tabs and create a todo in one, the other tab should eventually reflect it (React Query refetches on window focus by default)
-- Loading and error states are handled gracefully
+* If you open the app in two tabs and create a todo in one, the other tab should eventually reflect it (React Query refetches on window focus by default)
+* Loading and error states are handled gracefully
 
 ### Stretch Goals
 
-- Add optimistic updates to the toggle mutation so the UI updates instantly before the API responds
-- Install the [React Query Devtools](https://tanstack.com/query/latest/docs/framework/react/devtools) and explore the cache
+* Add optimistic updates to the toggle mutation so the UI updates instantly before the API responds
+* Install the [React Query Devtools](https://tanstack.com/query/latest/docs/framework/react/devtools) and explore the cache
 
 ---
 
@@ -538,11 +582,11 @@ Your Go API is a domain API — it's designed to serve any consumer (web, mobile
 
 A BFF is a thin server layer owned by the frontend team. It:
 
-- Aggregates multiple API calls into one response shaped for the UI
-- Handles auth tokens server-side so they never touch the browser
-- Translates or filters data so components get exactly what they need
+* Aggregates multiple API calls into one response shaped for the UI
+* Handles auth tokens server-side so they never touch the browser
+* Translates or filters data so components get exactly what they need
 
-```
+```text
 Browser → Next.js Route Handlers (BFF) → Go API
 ```
 
@@ -552,12 +596,12 @@ The browser never talks directly to Go. It talks to Next, and Next talks to Go.
 
 Migrate the todo UI into Next.js, then add Route Handlers as a BFF layer:
 
-| Next.js Route           | Proxies to Go API       |
-|-------------------------|-------------------------|
-| GET `/api/todos`        | GET `/todos`            |
-| POST `/api/todos`       | POST `/todos`           |
-| PATCH `/api/todos/:id`  | PATCH `/todos/:id`      |
-| DELETE `/api/todos/:id` | DELETE `/todos/:id`     |
+| Next.js Route           | Proxies to Go API   |
+| ----------------------- | ------------------- |
+| GET `/api/todos`        | GET `/todos`        |
+| POST `/api/todos`       | POST `/todos`       |
+| PATCH `/api/todos/:id`  | PATCH `/todos/:id`  |
+| DELETE `/api/todos/:id` | DELETE `/todos/:id` |
 
 Your React components should call `/api/todos` (the BFF), never `localhost:8080` directly.
 
@@ -571,11 +615,11 @@ npm install @tanstack/react-query axios
 
 ### Requirements
 
-- Use the App Router (`app/` directory)
-- The todo list page should be a **Server Component** that fetches todos at render time — no `useEffect`, no client-side fetch
-- Toggle and delete interactions require client state, so extract those into a `'use client'` component
-- Write Route Handlers in `app/api/todos/route.ts` and `app/api/todos/[id]/route.ts` that proxy to your Go API
-- Keep the Go API URL in an environment variable (`GO_API_URL=http://localhost:8080`)
+* Use the App Router (`app/` directory)
+* The todo list page should be a **Server Component** that fetches todos at render time — no `useEffect`, no client-side fetch
+* Toggle and delete interactions require client state, so extract those into a `'use client'` component
+* Write Route Handlers in `app/api/todos/route.ts` and `app/api/todos/[id]/route.ts` that proxy to your Go API
+* Keep the Go API URL in an environment variable (`GO_API_URL=http://localhost:8080`)
 
 ### Key Concepts to Understand
 
@@ -623,14 +667,14 @@ export async function POST(request: Request) {
 
 ### Expected Behavior
 
-- The todo list renders on the server — view source in the browser and you should see the todo HTML, not a loading spinner
-- Creating, toggling, and deleting todos works via the BFF route handlers
-- The Go API URL never appears in browser network requests — all calls go to `/api/todos`
+* The todo list renders on the server — view source in the browser and you should see the todo HTML, not a loading spinner
+* Creating, toggling, and deleting todos works via the BFF route handlers
+* The Go API URL never appears in browser network requests — all calls go to `/api/todos`
 
 ### Stretch Goals
 
-- Add a shape transformation in the BFF — return `{ id, title, completed }` instead of `{ id, title, done }` and update the UI to match. Notice how the BFF decouples the UI from the API contract
-- Add error handling in the Route Handlers that returns consistent error envelopes regardless of what the Go API returns
+* Add a shape transformation in the BFF — return `{ id, title, completed }` instead of `{ id, title, done }` and update the UI to match. Notice how the BFF decouples the UI from the API contract
+* Add error handling in the Route Handlers that returns consistent error envelopes regardless of what the Go API returns
 
 ---
 
@@ -645,7 +689,7 @@ Wire up the JWT authentication from Challenge 4 to your Next.js frontend. This i
 
 ### The Auth Flow
 
-```
+```text
 1. User submits login form
 2. Next.js Route Handler receives credentials
 3. Route Handler calls Go API → POST /auth/login
@@ -657,19 +701,19 @@ Wire up the JWT authentication from Challenge 4 to your Next.js frontend. This i
 
 ### What to Build
 
-| Page / Route              | Description                                         |
-|---------------------------|-----------------------------------------------------|
-| `/login`                  | Login form, calls BFF auth route                    |
-| `/api/auth/login`         | BFF route — calls Go API, sets HttpOnly cookie      |
-| `/api/auth/logout`        | BFF route — clears the cookie                       |
-| `/todos`                  | Protected page — redirects to `/login` if no cookie |
+| Page / Route       | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| `/login`           | Login form, calls BFF auth route                    |
+| `/api/auth/login`  | BFF route — calls Go API, sets HttpOnly cookie      |
+| `/api/auth/logout` | BFF route — clears the cookie                       |
+| `/todos`           | Protected page — redirects to `/login` if no cookie |
 
 ### Requirements
 
-- Store the JWT in an HttpOnly cookie via the BFF — never in `localStorage` or accessible JS
-- All BFF routes that proxy to protected Go endpoints must read the cookie and forward it as `Authorization: Bearer <token>`
-- The `/todos` page must redirect to `/login` if the auth cookie is missing
-- Use Next.js middleware (`middleware.ts`) to protect routes at the edge
+* Store the JWT in an HttpOnly cookie via the BFF — never in `localStorage` or accessible JS
+* All BFF routes that proxy to protected Go endpoints must read the cookie and forward it as `Authorization: Bearer <token>`
+* The `/todos` page must redirect to `/login` if the auth cookie is missing
+* Use Next.js middleware (`middleware.ts`) to protect routes at the edge
 
 ### Key Concepts to Understand
 
@@ -690,10 +734,10 @@ export async function POST(request: Request) {
     const { token } = await res.json()
 
     cookies().set('auth_token', token, {
-        httpOnly: true,    // JS cannot read this
-        secure: true,      // HTTPS only in production
+        httpOnly: true,
+        secure: true,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 // 24 hours
+        maxAge: 60 * 60 * 24
     })
 
     return Response.json({ success: true })
@@ -739,7 +783,7 @@ export const config = {
 
 ### Expected Behavior
 
-```bash
+```text
 # Visit /todos without being logged in → redirected to /login
 # Submit login form → cookie set, redirected to /todos
 # Todos load — Go API receives valid Bearer token from BFF
@@ -749,29 +793,33 @@ export const config = {
 
 ### Stretch Goals
 
-- Add a register page and wire it to `POST /auth/register`
-- Show the logged-in user's email in the UI header (decode it from the JWT on the server — never send the raw token to the client)
-- Handle token expiry — if the Go API returns `401`, clear the cookie and redirect to `/login`
+* Add a register page and wire it to `POST /auth/register`
+* Show the logged-in user's email in the UI header (decode it from the JWT on the server — never send the raw token to the client)
+* Handle token expiry — if the Go API returns `401`, clear the cookie and redirect to `/login`
 
 ---
 
 ## Tips & Resources
 
 ### Go
-- **Project layout:** `main.go`, `handlers.go`, `repository.go`, `middleware.go` is plenty for these challenges
-- **Testing your API:** [httpie](https://httpie.io/) (`http POST :8080/todos title="test"`) is friendlier than curl
-- **Go module setup:** `go mod init github.com/yourname/go-challenges && go mod tidy`
-- **Recommended packages:**
-  - Gin: `github.com/gin-gonic/gin`
-  - CORS: `github.com/gin-contrib/cors`
-  - SQLite driver: `github.com/mattn/go-sqlite3`
-  - JWT: `github.com/golang-jwt/jwt/v5`
-  - Bcrypt: `golang.org/x/crypto/bcrypt`
-  - Rate limiter: `golang.org/x/time/rate`
+
+* **Project layout:** `main.go`, `handlers.go`, `repository.go`, `middleware.go` is plenty for these challenges
+* **Testing your API:** [httpie](https://httpie.io/) (`http POST :8080/todos title="test"`) is friendlier than curl
+* **Go module setup:** `go mod init github.com/yourname/go-challenges && go mod tidy`
+* **PostgreSQL setup:** Use Docker or a local PostgreSQL installation
+* **Recommended packages:**
+
+  * Gin: `github.com/gin-gonic/gin`
+  * CORS: `github.com/gin-contrib/cors`
+  * PostgreSQL driver: `github.com/lib/pq`
+  * JWT: `github.com/golang-jwt/jwt/v5`
+  * Bcrypt: `golang.org/x/crypto/bcrypt`
+  * Rate limiter: `golang.org/x/time/rate`
 
 ### React / Next.js
-- **Vite docs:** https://vitejs.dev
-- **TanStack Query docs:** https://tanstack.com/query/latest
-- **Next.js App Router docs:** https://nextjs.org/docs/app
-- **Key mental shift for backend devs:** You're not writing procedures — you're describing what the UI looks like given the current state. React handles the rest.
-- **Server vs. Client Components:** If it needs `onClick`, `useState`, or browser APIs → `'use client'`. Everything else can stay a Server Component.
+
+* **Vite docs:** https://vitejs.dev
+* **TanStack Query docs:** https://tanstack.com/query/latest
+* **Next.js App Router docs:** https://nextjs.org/docs/app
+* **Key mental shift for backend devs:** You're not writing procedures — you're describing what the UI looks like given the current state. React handles the rest.
+* **Server vs. Client Components:** Understand which code runs on the server and which runs in the browser.
